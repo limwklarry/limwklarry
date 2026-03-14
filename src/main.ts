@@ -24,6 +24,7 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [BootScene, MenuScene, GameScene, GameOverScene],
   input: {
     activePointers: 1,
+    keyboard: true,
   },
   banner: false,
 };
