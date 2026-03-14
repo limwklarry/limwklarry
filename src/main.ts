@@ -1,17 +1,14 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { MenuScene } from './scenes/MenuScene';
-import { HeroSelectScene } from './scenes/HeroSelectScene';
 import { GameScene } from './scenes/GameScene';
-import { LevelUpScene } from './scenes/LevelUpScene';
 import { GameOverScene } from './scenes/GameOverScene';
-import { EquipmentScene } from './scenes/EquipmentScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game-container',
-  width: 390,
-  height: 844,
+  width: 960,
+  height: 640,
   backgroundColor: '#1a1a2e',
   scale: {
     mode: Phaser.Scale.FIT,
@@ -24,10 +21,19 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, MenuScene, HeroSelectScene, GameScene, LevelUpScene, GameOverScene, EquipmentScene],
+  scene: [BootScene, MenuScene, GameScene, GameOverScene],
   input: {
-    activePointers: 2,
+    activePointers: 1,
   },
+  banner: false,
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+// Prevent right-click context menu on canvas
+window.addEventListener('contextmenu', (e) => {
+  const target = e.target as HTMLElement;
+  if (target && target.tagName === 'CANVAS') {
+    e.preventDefault();
+  }
+});

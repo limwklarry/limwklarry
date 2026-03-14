@@ -1,191 +1,204 @@
-import { HeroDefinition, AbilityEffect, EQUIPMENT, EquipmentDefinition } from '../data/GameData';
-import { SaveManager } from '../utils/SaveManager';
+import {
+  WeaponDefinition,
+  SkillDefinition,
+  BASE_PLAYER_STATS,
+  UpgradeEffect,
+  GAME_WIDTH,
+  GAME_HEIGHT,
+} from '../data/GameData';
 
 export class Player {
   sprite: Phaser.Physics.Arcade.Sprite;
   scene: Phaser.Scene;
 
-  // Base stats (from hero + equipment)
+  // Equipped loadout
+  weapon!: WeaponDefinition;
+  skill!: SkillDefinition;
+
+  // Base stats
   maxHp: number;
   hp: number;
-  baseAttack: number;
-  baseSpeed: number;
-  baseAttackSpeed: number;
-
-  // Computed stats (after abilities)
-  attack: number;
-  speed: number;
-  attackSpeed: number;
+  maxMp: number;
+  mp: number;
+  hpRegen: number;
+  mpRegen: number;
+  armor: number;
+  lifesteal: number;
   critChance: number;
   critDamage: number;
-  lifeSteal: number;
-  shield: number;
-  maxShield: number;
+  damageMult: number;
+  attackSpeedMult: number;
+  moveSpeedMult: number;
+  rangeMult: number;
+  projectileBonus: number;
+  baseSpeed: number;
 
-  // Ability flags
-  piercing = false;
-  bouncing = false;
-  diagonalArrows = false;
-  rearArrow = false;
-  multishot = false;
-  projectileCount = 0;
-  poisonDamage = 0;
-  freezeChance = 0;
-  fireTrail = false;
-  orbitalCount = 0;
+  // Computed
+  speed: number;
+
+  // Weapon upgrade bonuses (from shop)
+  weaponDamageBonus = 0;
+  weaponSpeedBonus = 0;
+  weaponRangeBonus = 0;
+
+  // Temp buffs
+  damageBuff = 0;
+  damageBuff_timer = 0;
+  defenseBuff = 0;
+  defenseBuff_timer = 0;
+
+  // Glacier buff
+  glacierBuff = false;
 
   // State
   level = 1;
   xp = 0;
   invincible = false;
-  facingAngle = -Math.PI / 2; // Facing up by default
+  facingAngle = 0;
   killCount = 0;
-  isMoving = false;
 
-  // Orbitals
-  orbitals: Phaser.GameObjects.Sprite[] = [];
-  orbitalAngle = 0;
+  // Skill cooldown state
+  skillCooldownEnd = 0;
+  skillReady = true;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, heroDef: HeroDefinition) {
+  // Regen accumulator
+  private regenAccum = 0;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
     this.scene = scene;
 
-    // Create sprite
     this.sprite = scene.physics.add.sprite(x, y, 'hero');
     this.sprite.setScale(1.2);
     this.sprite.setCollideWorldBounds(true);
-    this.sprite.setTint(heroDef.color);
     this.sprite.setDepth(10);
     this.sprite.body?.setSize(24, 24);
 
-    // Apply base stats
-    this.maxHp = heroDef.baseHp;
-    this.baseAttack = heroDef.baseAttack;
-    this.baseSpeed = heroDef.baseSpeed;
-    this.baseAttackSpeed = heroDef.attackSpeed;
-
-    // Apply equipment bonuses
-    const save = SaveManager.getData();
-    for (const slot of Object.keys(save.equippedItems)) {
-      const itemId = save.equippedItems[slot];
-      const item = EQUIPMENT.find((e: EquipmentDefinition) => e.id === itemId);
-      if (item) {
-        this.maxHp += item.hpBonus;
-        this.baseAttack += item.attackBonus;
-      }
-    }
-
-    // Apply hero special
-    if (heroDef.id === 'knight') this.maxHp = Math.floor(this.maxHp * 1.3);
-    if (heroDef.id === 'archer') this.baseAttackSpeed = Math.floor(this.baseAttackSpeed * 0.9);
-    if (heroDef.id === 'ranger') this.piercing = true;
-
+    // Initialize base stats
+    this.maxHp = BASE_PLAYER_STATS.maxHp;
     this.hp = this.maxHp;
-    this.attack = this.baseAttack;
+    this.maxMp = BASE_PLAYER_STATS.maxMp;
+    this.mp = this.maxMp;
+    this.hpRegen = BASE_PLAYER_STATS.hpRegen;
+    this.mpRegen = BASE_PLAYER_STATS.mpRegen;
+    this.armor = BASE_PLAYER_STATS.armor;
+    this.lifesteal = BASE_PLAYER_STATS.lifesteal;
+    this.critChance = BASE_PLAYER_STATS.critChance;
+    this.critDamage = BASE_PLAYER_STATS.critDamage;
+    this.damageMult = BASE_PLAYER_STATS.damageMult;
+    this.attackSpeedMult = BASE_PLAYER_STATS.attackSpeedMult;
+    this.moveSpeedMult = BASE_PLAYER_STATS.moveSpeedMult;
+    this.rangeMult = BASE_PLAYER_STATS.rangeMult;
+    this.projectileBonus = BASE_PLAYER_STATS.projectileBonus;
+    this.baseSpeed = BASE_PLAYER_STATS.baseSpeed;
     this.speed = this.baseSpeed;
-    this.attackSpeed = this.baseAttackSpeed;
-    this.critChance = 0.05;
-    this.critDamage = 1.5;
-    this.lifeSteal = 0;
-    this.shield = 0;
-    this.maxShield = 0;
   }
 
-  applyAbilities(effects: AbilityEffect[]): void {
-    // Reset computed stats
-    let attackMult = 1;
-    let speedMult = 1;
-    let hpMult = 1;
-    let asMult = 1;
-    this.piercing = false;
-    this.bouncing = false;
-    this.diagonalArrows = false;
-    this.rearArrow = false;
-    this.multishot = false;
-    this.projectileCount = 0;
-    this.poisonDamage = 0;
-    this.freezeChance = 0;
-    this.fireTrail = false;
-    this.orbitalCount = 0;
-    this.critChance = 0.05;
-    this.critDamage = 1.5;
-    this.lifeSteal = 0;
-    this.maxShield = 0;
+  setLoadout(weapon: WeaponDefinition, skill: SkillDefinition): void {
+    this.weapon = weapon;
+    this.skill = skill;
+  }
 
-    // Re-check hero specials
-    const save = SaveManager.getData();
-    const heroDef = (this.scene as any).heroDef;
-    if (heroDef?.id === 'ranger') this.piercing = true;
+  getEffectiveAttackDamage(): number {
+    const base = this.weapon.baseDamage + this.weaponDamageBonus;
+    let mult = this.damageMult;
+    if (this.damageBuff > 0) mult += 0.2;
+    if (this.glacierBuff) mult += 0.25;
+    return Math.floor(base * mult);
+  }
 
-    for (const effect of effects) {
-      if (effect.attackBonus) attackMult += effect.attackBonus;
-      if (effect.speedBonus) speedMult += effect.speedBonus;
-      if (effect.hpBonus) hpMult += effect.hpBonus;
-      if (effect.attackSpeedBonus) asMult += effect.attackSpeedBonus;
-      if (effect.projectileCount) this.projectileCount += effect.projectileCount;
-      if (effect.piercing) this.piercing = true;
-      if (effect.bouncing) this.bouncing = true;
-      if (effect.diagonalArrows) this.diagonalArrows = true;
-      if (effect.rearArrow) this.rearArrow = true;
-      if (effect.multishot) this.multishot = true;
-      if (effect.critChance) this.critChance += effect.critChance;
-      if (effect.critDamage) this.critDamage += effect.critDamage;
-      if (effect.lifeSteal) this.lifeSteal += effect.lifeSteal;
-      if (effect.shield) this.maxShield += effect.shield;
-      if (effect.poisonDamage) this.poisonDamage += effect.poisonDamage;
-      if (effect.freezeChance) this.freezeChance += effect.freezeChance;
-      if (effect.fireTrail) this.fireTrail = true;
-      if (effect.orbitalCount) this.orbitalCount += effect.orbitalCount;
+  getEffectiveAttackSpeed(): number {
+    let mult = this.attackSpeedMult + this.weaponSpeedBonus;
+    if (this.glacierBuff) mult += 0.3;
+    return Math.floor(this.weapon.attackSpeed / mult);
+  }
+
+  getEffectiveRange(): number {
+    let mult = this.rangeMult + this.weaponRangeBonus;
+    if (this.glacierBuff) mult += 0.2;
+    return Math.floor(this.weapon.range * mult);
+  }
+
+  getEffectiveArmor(): number {
+    return this.armor + (this.defenseBuff > 0 ? 5 : 0);
+  }
+
+  canUseSkill(time: number): boolean {
+    return this.mp >= this.skill.mpCost && time >= this.skillCooldownEnd;
+  }
+
+  useSkill(time: number): boolean {
+    if (!this.canUseSkill(time)) return false;
+    this.mp -= this.skill.mpCost;
+    this.skillCooldownEnd = time + this.skill.cooldown;
+    this.skillReady = false;
+    return true;
+  }
+
+  getSkillCooldownPercent(time: number): number {
+    if (time >= this.skillCooldownEnd) return 1;
+    const elapsed = this.skill.cooldown - (this.skillCooldownEnd - time);
+    return Math.max(0, elapsed / this.skill.cooldown);
+  }
+
+  applyUpgrades(effects: UpgradeEffect[]): void {
+    // Reset to base
+    this.damageMult = BASE_PLAYER_STATS.damageMult;
+    this.attackSpeedMult = BASE_PLAYER_STATS.attackSpeedMult;
+    this.moveSpeedMult = BASE_PLAYER_STATS.moveSpeedMult;
+    this.rangeMult = BASE_PLAYER_STATS.rangeMult;
+    this.projectileBonus = BASE_PLAYER_STATS.projectileBonus;
+    this.lifesteal = BASE_PLAYER_STATS.lifesteal;
+    this.armor = BASE_PLAYER_STATS.armor;
+    this.hpRegen = BASE_PLAYER_STATS.hpRegen;
+    this.critChance = BASE_PLAYER_STATS.critChance;
+    this.critDamage = BASE_PLAYER_STATS.critDamage;
+    this.mpRegen = BASE_PLAYER_STATS.mpRegen;
+
+    let maxHpBonus = 0;
+    let maxMpBonus = 0;
+
+    for (const eff of effects) {
+      if (eff.damageMult) this.damageMult = eff.damageMult;
+      if (eff.attackSpeedMult) this.attackSpeedMult = eff.attackSpeedMult;
+      if (eff.speedMult) this.moveSpeedMult = eff.speedMult;
+      if (eff.projectileBonus) this.projectileBonus += eff.projectileBonus;
+      if (eff.lifestealPercent) this.lifesteal += eff.lifestealPercent;
+      if (eff.armorBonus) this.armor += eff.armorBonus;
+      if (eff.hpRegenBonus) this.hpRegen += eff.hpRegenBonus;
+      if (eff.maxHpBonus) maxHpBonus += eff.maxHpBonus;
+      if (eff.mpRegenBonus) this.mpRegen += eff.mpRegenBonus;
+      if (eff.maxMpBonus) maxMpBonus += eff.maxMpBonus;
+      if (eff.critDamageBonus) this.critDamage += eff.critDamageBonus;
+      if (eff.critChanceBonus) this.critChance += eff.critChanceBonus;
     }
 
-    this.attack = Math.floor(this.baseAttack * attackMult);
-    this.speed = Math.floor(this.baseSpeed * speedMult);
-    const oldMax = this.maxHp;
-    this.maxHp = Math.floor((this.scene as any).heroDef?.baseHp * hpMult) || this.maxHp;
-    // Re-add equipment
-    for (const slot of Object.keys(save.equippedItems)) {
-      const itemId = save.equippedItems[slot];
-      const item = EQUIPMENT.find((e: EquipmentDefinition) => e.id === itemId);
-      if (item) this.maxHp += item.hpBonus;
-    }
-    if (heroDef?.id === 'knight') this.maxHp = Math.floor(this.maxHp * 1.3);
-    if (this.maxHp > oldMax) {
-      this.hp += (this.maxHp - oldMax);
-    }
+    const oldMaxHp = this.maxHp;
+    this.maxHp = BASE_PLAYER_STATS.maxHp + maxHpBonus;
+    if (this.maxHp > oldMaxHp) this.hp += (this.maxHp - oldMaxHp);
     this.hp = Math.min(this.hp, this.maxHp);
-    this.attackSpeed = Math.floor(this.baseAttackSpeed / asMult);
-    this.shield = this.maxShield;
 
-    this.updateOrbitals();
+    const oldMaxMp = this.maxMp;
+    this.maxMp = BASE_PLAYER_STATS.maxMp + maxMpBonus;
+    if (this.maxMp > oldMaxMp) this.mp += (this.maxMp - oldMaxMp);
+    this.mp = Math.min(this.mp, this.maxMp);
+
+    this.speed = Math.floor(this.baseSpeed * this.moveSpeedMult);
   }
 
   takeDamage(amount: number): boolean {
     if (this.invincible) return false;
 
-    // Shield absorbs damage first
-    if (this.shield > 0) {
-      if (this.shield >= amount) {
-        this.shield -= amount;
-        this.showDamageNumber(0, true);
-        return false;
-      }
-      amount -= this.shield;
-      this.shield = 0;
-    }
+    const reduced = Math.max(1, amount - this.getEffectiveArmor());
+    this.hp -= reduced;
+    this.showFloatingText(`-${reduced}`, '#ff4444');
 
-    this.hp -= amount;
-    this.showDamageNumber(amount, false);
-
-    // Flash effect
+    // Flash + invincibility
     this.invincible = true;
     this.sprite.setTint(0xff0000);
     this.scene.time.delayedCall(100, () => {
-      if (this.sprite.active) {
-        this.sprite.clearTint();
-        const heroDef = (this.scene as any).heroDef;
-        if (heroDef) this.sprite.setTint(heroDef.color);
-      }
+      if (this.sprite.active) this.sprite.setTint(0x4ecdc4);
     });
-    this.scene.time.delayedCall(500, () => {
+    this.scene.time.delayedCall(400, () => {
       this.invincible = false;
     });
 
@@ -193,18 +206,51 @@ export class Player {
   }
 
   heal(amount: number): void {
-    this.hp = Math.min(this.hp + amount, this.maxHp);
-    this.showHealNumber(amount);
+    const actual = Math.min(amount, this.maxHp - this.hp);
+    if (actual <= 0) return;
+    this.hp += actual;
+    this.showFloatingText(`+${actual}`, '#66bb6a');
   }
 
-  private showDamageNumber(amount: number, shielded: boolean): void {
-    const text = this.scene.add.text(
-      this.sprite.x,
+  restoreMana(amount: number): void {
+    this.mp = Math.min(this.mp + amount, this.maxMp);
+  }
+
+  update(delta: number, time: number): void {
+    // Regen HP and MP
+    this.regenAccum += delta / 1000;
+    if (this.regenAccum >= 1) {
+      this.regenAccum -= 1;
+      if (this.hp < this.maxHp) {
+        this.hp = Math.min(this.hp + this.hpRegen, this.maxHp);
+      }
+      if (this.mp < this.maxMp) {
+        this.mp = Math.min(this.mp + this.mpRegen, this.maxMp);
+      }
+    }
+
+    // Update skill readiness
+    if (!this.skillReady && time >= this.skillCooldownEnd) {
+      this.skillReady = true;
+    }
+
+    // Expire buffs
+    if (this.damageBuff > 0 && time > this.damageBuff_timer) {
+      this.damageBuff = 0;
+    }
+    if (this.defenseBuff > 0 && time > this.defenseBuff_timer) {
+      this.defenseBuff = 0;
+    }
+  }
+
+  showFloatingText(text: string, color: string): void {
+    const ft = this.scene.add.text(
+      this.sprite.x + Phaser.Math.Between(-10, 10),
       this.sprite.y - 30,
-      shielded ? 'BLOCKED' : `-${amount}`,
+      text,
       {
         fontSize: '16px',
-        color: shielded ? '#42a5f5' : '#ff4444',
+        color,
         fontFamily: 'Arial',
         fontStyle: 'bold',
         stroke: '#000000',
@@ -213,64 +259,15 @@ export class Player {
     ).setOrigin(0.5).setDepth(100);
 
     this.scene.tweens.add({
-      targets: text,
-      y: text.y - 40,
+      targets: ft,
+      y: ft.y - 40,
       alpha: 0,
       duration: 800,
-      onComplete: () => text.destroy(),
+      onComplete: () => ft.destroy(),
     });
-  }
-
-  private showHealNumber(amount: number): void {
-    const text = this.scene.add.text(
-      this.sprite.x,
-      this.sprite.y - 30,
-      `+${amount}`,
-      {
-        fontSize: '16px',
-        color: '#66bb6a',
-        fontFamily: 'Arial',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 3,
-      }
-    ).setOrigin(0.5).setDepth(100);
-
-    this.scene.tweens.add({
-      targets: text,
-      y: text.y - 40,
-      alpha: 0,
-      duration: 800,
-      onComplete: () => text.destroy(),
-    });
-  }
-
-  private updateOrbitals(): void {
-    // Remove old orbitals
-    this.orbitals.forEach(o => o.destroy());
-    this.orbitals = [];
-
-    for (let i = 0; i < this.orbitalCount; i++) {
-      const orb = this.scene.add.sprite(0, 0, 'orbital').setDepth(11);
-      this.orbitals.push(orb);
-    }
-  }
-
-  update(): void {
-    // Update orbital positions
-    if (this.orbitals.length > 0) {
-      this.orbitalAngle += 0.03;
-      const radius = 45;
-      this.orbitals.forEach((orb, i) => {
-        const angle = this.orbitalAngle + (i * (Math.PI * 2) / this.orbitals.length);
-        orb.x = this.sprite.x + Math.cos(angle) * radius;
-        orb.y = this.sprite.y + Math.sin(angle) * radius;
-      });
-    }
   }
 
   destroy(): void {
-    this.orbitals.forEach(o => o.destroy());
     this.sprite.destroy();
   }
 }

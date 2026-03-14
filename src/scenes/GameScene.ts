@@ -1,184 +1,123 @@
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { CombatSystem } from '../systems/CombatSystem';
-import { JoystickSystem } from '../systems/JoystickSystem';
+import { InputSystem } from '../systems/JoystickSystem';
 import {
-  HEROES,
-  ABILITIES,
-  ENEMIES_BY_CHAPTER,
-  BOSSES,
-  ROOMS_PER_CHAPTER,
-  BOSS_ROOM_INTERVAL,
-  WAVES_PER_ROOM,
-  getXpForLevel,
-  getEnemyCountForWave,
-  AbilityEffect,
+  WEAPONS, SKILLS, UPGRADES, SHOP_ITEMS,
+  ENEMIES_BY_CHAPTER, BOSSES,
+  WAVES_PER_STAGE, BOSS_WAVE_INTERVAL,
+  getXpForLevel, getEnemyCountForWave,
+  GAME_WIDTH, GAME_HEIGHT, UpgradeEffect,
 } from '../data/GameData';
 import { SaveManager } from '../utils/SaveManager';
-import { HUD } from '../ui/HUD';
+import {
+  HUD, LoadoutOverlay, UpgradeDraftOverlay,
+  ShopOverlay, PanelOverlay, CenterMessage, PauseBanner,
+} from '../ui/HUD';
+
+type GamePhase = 'loadout' | 'playing' | 'shop' | 'upgrade' | 'paused' | 'dead' | 'panel';
 
 export class GameScene extends Phaser.Scene {
   player!: Player;
-  heroDef!: any;
   enemies: Enemy[] = [];
   combat!: CombatSystem;
-  joystick!: JoystickSystem;
+  input_sys!: InputSystem;
   hud!: HUD;
   enemyBullets!: Phaser.Physics.Arcade.Group;
 
-  // Dungeon state
-  chapter = 0;
-  room = 0;
-  wave = 0;
-  goldEarned = 0;
-  roomCleared = false;
-  transitioning = false;
-
-  // Ability state
-  abilityLevels: Record<string, number> = {};
-  abilityEffects: AbilityEffect[] = [];
-
-  // XP orbs
+  // Groups
   xpOrbs!: Phaser.Physics.Arcade.Group;
-  // Coins
   coins!: Phaser.Physics.Arcade.Group;
 
-  // Door
-  door: Phaser.GameObjects.Image | null = null;
+  // Run state
+  stage = 1;
+  wave = 0;
+  runGold = 0;
+  runEssence = 0;
+  phase: GamePhase = 'loadout';
+  private prevPhase: GamePhase = 'playing';
+
+  // Upgrade state
+  upgradeLevels: Record<string, number> = {};
+
+  // Panel references
+  private currentPanel: PanelOverlay | null = null;
+  private pauseBanner: PauseBanner | null = null;
 
   constructor() {
     super({ key: 'GameScene' });
   }
 
   create(): void {
-    const { width, height } = this.scale;
-
     // Reset state
-    this.chapter = 0;
-    this.room = 0;
+    this.stage = SaveManager.getData().stageCheckpoint || 1;
     this.wave = 0;
-    this.goldEarned = 0;
-    this.roomCleared = false;
-    this.transitioning = false;
-    this.abilityLevels = {};
-    this.abilityEffects = [];
+    this.runGold = 0;
+    this.runEssence = 0;
+    this.upgradeLevels = {};
     this.enemies = [];
-    this.door = null;
+    this.phase = 'loadout';
 
-    // Create floor background
+    // Create floor
     this.createFloor();
-
-    // Create walls
     this.createWalls();
 
-    // Setup hero
-    const save = SaveManager.getData();
-    this.heroDef = HEROES.find(h => h.id === save.selectedHero) || HEROES[0];
+    // Player (placed at center, will be set after loadout)
+    this.player = new Player(this, GAME_WIDTH / 2, GAME_HEIGHT / 2);
 
-    // Create player
-    this.player = new Player(this, width / 2, height / 2, this.heroDef);
-
-    // Joystick
-    this.joystick = new JoystickSystem(this);
+    // Input system
+    this.input_sys = new InputSystem(this);
 
     // Combat system
     this.combat = new CombatSystem(this, this.player);
 
-    // Enemy bullets group
+    // Enemy bullets
     this.enemyBullets = this.physics.add.group({
       defaultKey: 'enemy_bullet',
       maxSize: 100,
     });
 
-    // XP orbs group
-    this.xpOrbs = this.physics.add.group({
-      defaultKey: 'xp_orb',
-      maxSize: 50,
-    });
-
-    // Coins group
-    this.coins = this.physics.add.group({
-      defaultKey: 'coin',
-      maxSize: 30,
-    });
+    // Pickups
+    this.xpOrbs = this.physics.add.group({ defaultKey: 'xp_orb', maxSize: 50 });
+    this.coins = this.physics.add.group({ defaultKey: 'coin', maxSize: 50 });
 
     // HUD
     this.hud = new HUD(this);
 
-    // Setup collisions
+    // Collisions
     this.setupCollisions();
 
-    // Start first wave
-    this.time.delayedCall(500, () => this.spawnWave());
-
-    // Pause button
-    this.add.text(width - 40, 45, '||', {
-      fontSize: '24px',
-      color: '#ffffff',
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(50).setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => {
-        this.scene.pause();
-        // Simple pause overlay
-        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7).setDepth(200);
-        const pauseText = this.add.text(width / 2, height / 2 - 40, 'PAUSED', {
-          fontSize: '36px',
-          color: '#ffffff',
-          fontFamily: 'Arial',
-          fontStyle: 'bold',
-        }).setOrigin(0.5).setDepth(201);
-        const resumeBtn = this.add.text(width / 2, height / 2 + 30, 'Tap to Resume', {
-          fontSize: '20px',
-          color: '#4ecdc4',
-          fontFamily: 'Arial',
-        }).setOrigin(0.5).setDepth(201);
-
-        this.input.once('pointerdown', () => {
-          overlay.destroy();
-          pauseText.destroy();
-          resumeBtn.destroy();
-          this.scene.resume();
-        });
-      });
+    // Show loadout overlay
+    new LoadoutOverlay(this, (weaponId, skillId) => {
+      const weapon = WEAPONS.find(w => w.id === weaponId)!;
+      const skill = SKILLS.find(s => s.id === skillId)!;
+      this.player.setLoadout(weapon, skill);
+      this.phase = 'playing';
+      this.time.delayedCall(500, () => this.spawnWave());
+    });
   }
 
   private createFloor(): void {
-    const { width, height } = this.scale;
-    for (let x = 0; x < width; x += 40) {
-      for (let y = 0; y < height; y += 40) {
+    for (let x = 0; x < GAME_WIDTH; x += 40) {
+      for (let y = 0; y < GAME_HEIGHT; y += 40) {
         this.add.image(x + 20, y + 20, 'floor').setDepth(0);
       }
     }
   }
 
   private createWalls(): void {
-    // Visual walls around the play area
-    const { width, height } = this.scale;
     const wallGroup = this.physics.add.staticGroup();
-
-    // Top and bottom walls
-    for (let x = 0; x < width; x += 40) {
-      wallGroup.create(x + 20, 30, 'wall').setDepth(1).refreshBody();
-      wallGroup.create(x + 20, height - 10, 'wall').setDepth(1).refreshBody();
+    for (let x = 0; x < GAME_WIDTH; x += 40) {
+      wallGroup.create(x + 20, 10, 'wall').setDepth(1).refreshBody();
+      wallGroup.create(x + 20, GAME_HEIGHT - 10, 'wall').setDepth(1).refreshBody();
     }
-    // Left and right walls
-    for (let y = 40; y < height - 20; y += 40) {
+    for (let y = 20; y < GAME_HEIGHT - 20; y += 40) {
       wallGroup.create(10, y + 20, 'wall').setDepth(1).refreshBody();
-      wallGroup.create(width - 10, y + 20, 'wall').setDepth(1).refreshBody();
+      wallGroup.create(GAME_WIDTH - 10, y + 20, 'wall').setDepth(1).refreshBody();
     }
   }
 
   private setupCollisions(): void {
-    // Arrow hits enemy
-    this.physics.add.overlap(
-      this.combat.projectiles,
-      this.physics.add.group(), // Placeholder, we check manually
-      undefined,
-      undefined,
-      this,
-    );
-
     // Enemy bullet hits player
     this.physics.add.overlap(
       this.player.sprite,
@@ -188,34 +127,32 @@ export class GameScene extends Phaser.Scene {
         const damage = b.getData('damage') || 10;
         const dead = this.player.takeDamage(damage);
         b.destroy();
-        if (dead) this.gameOver();
+        if (dead) this.onDeath();
       },
       undefined,
       this,
     );
 
-    // Player collects XP orbs
+    // Collect XP orbs
     this.physics.add.overlap(
       this.player.sprite,
       this.xpOrbs,
       (_player, orb) => {
         const xpOrb = orb as Phaser.Physics.Arcade.Sprite;
-        const xpAmount = xpOrb.getData('xp') || 10;
-        this.addXp(xpAmount);
+        this.addXp(xpOrb.getData('xp') || 10);
         xpOrb.destroy();
       },
       undefined,
       this,
     );
 
-    // Player collects coins
+    // Collect coins
     this.physics.add.overlap(
       this.player.sprite,
       this.coins,
       (_player, coin) => {
         const c = coin as Phaser.Physics.Arcade.Sprite;
-        const goldAmount = c.getData('gold') || 5;
-        this.goldEarned += goldAmount;
+        this.runGold += c.getData('gold') || 5;
         c.destroy();
       },
       undefined,
@@ -223,36 +160,64 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  update(time: number): void {
-    if (this.transitioning) return;
+  update(time: number, delta: number): void {
+    this.input_sys.update();
 
-    // Player movement via joystick
-    if (this.joystick.isActive) {
-      this.player.sprite.setVelocity(
-        this.joystick.direction.x * this.player.speed,
-        this.joystick.direction.y * this.player.speed,
-      );
-      this.player.isMoving = true;
-      this.player.facingAngle = Math.atan2(this.joystick.direction.y, this.joystick.direction.x);
-    } else {
-      this.player.sprite.setVelocity(0, 0);
-      this.player.isMoving = false;
+    // Handle panel toggle keys regardless of phase
+    if (this.phase === 'playing' || this.phase === 'panel' || this.phase === 'paused') {
+      this.handlePanelKeys();
     }
 
-    // Update player
-    this.player.update();
+    // Pause toggle
+    if (this.input_sys.consumeKey('ESC')) {
+      if (this.phase === 'paused') {
+        this.phase = this.prevPhase;
+        this.pauseBanner?.destroy();
+        this.pauseBanner = null;
+      } else if (this.phase === 'playing') {
+        this.prevPhase = this.phase;
+        this.phase = 'paused';
+        this.pauseBanner = new PauseBanner(this);
+      }
+    }
 
-    // Update enemies
+    // Restart after death
+    if (this.phase === 'dead' && this.input_sys.consumeKey('R')) {
+      this.scene.restart();
+      return;
+    }
+
+    if (this.phase !== 'playing') {
+      this.hud.update();
+      return;
+    }
+
+    // Player movement
+    this.player.sprite.setVelocity(
+      this.input_sys.direction.x * this.player.speed,
+      this.input_sys.direction.y * this.player.speed,
+    );
+
+    // Aim
+    this.input_sys.updateAimAngle(this.player.sprite.x, this.player.sprite.y);
+    this.player.facingAngle = this.input_sys.aimAngle;
+
+    // Player update (regen, buffs)
+    this.player.update(delta, time);
+
+    // Combat (left click to attack)
     const activeEnemies = this.enemies.filter(e => e.sprite.active);
-    activeEnemies.forEach(enemy => {
-      enemy.update(this.player.sprite.x, this.player.sprite.y);
-    });
+    this.combat.update(time, activeEnemies, this.input_sys.aimAngle, this.input_sys.leftDown);
 
-    // Check arrow-enemy collisions manually
+    // Right click: special skill
+    if (this.input_sys.consumeRightClick()) {
+      this.combat.useSkill(time, activeEnemies);
+    }
+
+    // Check projectile-enemy collisions
     this.combat.projectiles.getChildren().forEach(proj => {
       const arrow = proj as Phaser.Physics.Arcade.Sprite;
       if (!arrow.active) return;
-
       for (const enemy of activeEnemies) {
         if (!enemy.sprite.active) continue;
         const dist = Phaser.Math.Distance.Between(
@@ -260,12 +225,12 @@ export class GameScene extends Phaser.Scene {
         );
         if (dist < enemy.definition.size + 8) {
           this.combat.handleProjectileHit(arrow, enemy.sprite);
-          break;
+          if (!arrow.active) break;
         }
       }
     });
 
-    // Check contact damage (enemy touching player)
+    // Contact damage
     for (const enemy of activeEnemies) {
       if (!enemy.sprite.active) continue;
       const dist = Phaser.Math.Distance.Between(
@@ -275,21 +240,47 @@ export class GameScene extends Phaser.Scene {
       if (dist < enemy.definition.size + 12) {
         const dead = this.player.takeDamage(Math.floor(enemy.attack * 0.5));
         if (dead) {
-          this.gameOver();
+          this.onDeath();
           return;
         }
       }
     }
 
-    // Update combat (auto-attack)
-    this.combat.update(time, activeEnemies);
+    // Update enemies
+    activeEnemies.forEach(e => e.update(this.player.sprite.x, this.player.sprite.y, time));
 
-    // Update HUD
+    // Attract pickups
+    this.attractPickups(this.xpOrbs);
+    this.attractPickups(this.coins);
+
+    // HUD
     this.hud.update();
+  }
 
-    // Attract XP orbs toward player
-    this.xpOrbs.getChildren().forEach(orb => {
-      const o = orb as Phaser.Physics.Arcade.Sprite;
+  private handlePanelKeys(): void {
+    const togglePanel = (type: 'inventory' | 'powerups' | 'settings' | 'help') => {
+      if (this.currentPanel) {
+        this.currentPanel.destroy();
+        this.currentPanel = null;
+        this.phase = 'playing';
+      } else if (this.phase === 'playing') {
+        const data = type === 'powerups'
+          ? { upgradeLevels: this.upgradeLevels }
+          : this;
+        this.currentPanel = new PanelOverlay(this, type, data);
+        this.phase = 'panel';
+      }
+    };
+
+    if (this.input_sys.consumeKey('I')) togglePanel('inventory');
+    if (this.input_sys.consumeKey('P')) togglePanel('powerups');
+    if (this.input_sys.consumeKey('O')) togglePanel('settings');
+    if (this.input_sys.consumeKey('H')) togglePanel('help');
+  }
+
+  private attractPickups(group: Phaser.Physics.Arcade.Group): void {
+    group.getChildren().forEach(obj => {
+      const o = obj as Phaser.Physics.Arcade.Sprite;
       if (!o.active) return;
       const dist = Phaser.Math.Distance.Between(
         this.player.sprite.x, this.player.sprite.y, o.x, o.y,
@@ -299,46 +290,36 @@ export class GameScene extends Phaser.Scene {
         o.setVelocity(Math.cos(angle) * 200, Math.sin(angle) * 200);
       }
     });
-
-    // Check if door can be entered
-    if (this.door && this.roomCleared) {
-      const dist = Phaser.Math.Distance.Between(
-        this.player.sprite.x, this.player.sprite.y,
-        this.door.x, this.door.y,
-      );
-      if (dist < 50) {
-        this.nextRoom();
-      }
-    }
   }
 
+  // ============================================================
+  // Wave Spawning
+  // ============================================================
   private spawnWave(): void {
-    if (this.transitioning) return;
+    if (this.phase !== 'playing') return;
 
-    const isBossRoom = (this.room + 1) % BOSS_ROOM_INTERVAL === 0;
-    const chapterIndex = Math.min(this.chapter, ENEMIES_BY_CHAPTER.length - 1);
+    const isBossWave = (this.wave + 1) % BOSS_WAVE_INTERVAL === 0;
+    const chapterIndex = Math.min(this.stage - 1, ENEMIES_BY_CHAPTER.length - 1);
 
-    if (isBossRoom && this.wave === 0) {
-      // Boss fight
-      const bossIndex = Math.min(this.chapter, BOSSES.length - 1);
+    if (isBossWave) {
+      const bossIndex = Math.min(this.stage - 1, BOSSES.length - 1);
       const bossDef = BOSSES[bossIndex];
-      const boss = new Enemy(this, 195, 200, bossDef, this.chapter, this.room);
+      const boss = new Enemy(this, GAME_WIDTH / 2, 120, bossDef, this.stage - 1, this.wave);
       this.enemies.push(boss);
-      this.wave = WAVES_PER_ROOM; // No more waves after boss
-    } else if (!isBossRoom) {
-      const enemyDefs = ENEMIES_BY_CHAPTER[chapterIndex];
-      const count = getEnemyCountForWave(this.room, this.wave);
+    } else {
+      const enemyDefs = ENEMIES_BY_CHAPTER[chapterIndex] || ENEMIES_BY_CHAPTER[0];
+      const count = getEnemyCountForWave(this.wave, this.stage - 1);
 
       for (let i = 0; i < count; i++) {
         const def = Phaser.Utils.Array.GetRandom(enemyDefs);
-        const x = Phaser.Math.Between(60, 330);
-        const y = Phaser.Math.Between(80, 350);
-        const enemy = new Enemy(this, x, y, def, this.chapter, this.room);
+        const x = Phaser.Math.Between(60, GAME_WIDTH - 60);
+        const y = Phaser.Math.Between(60, GAME_HEIGHT / 2);
+        const enemy = new Enemy(this, x, y, def, this.stage - 1, this.wave);
         this.enemies.push(enemy);
       }
-
-      this.wave++;
     }
+
+    CenterMessage.show(this, `Wave ${this.wave + 1}`, '#ffffff', 1000);
   }
 
   onEnemyKilled(enemy: Enemy): void {
@@ -349,197 +330,183 @@ export class GameScene extends Phaser.Scene {
     if (xpOrb) {
       xpOrb.setData('xp', enemy.xpValue);
       xpOrb.setDepth(3);
-      // Small random velocity
-      xpOrb.setVelocity(
-        Phaser.Math.Between(-30, 30),
-        Phaser.Math.Between(-30, 30),
-      );
+      xpOrb.setVelocity(Phaser.Math.Between(-30, 30), Phaser.Math.Between(-30, 30));
       xpOrb.setDrag(50);
     }
 
-    // Chance to drop coin
-    if (Math.random() < 0.4) {
+    // Drop coin
+    if (Math.random() < 0.5) {
       const coin = this.coins.create(enemy.sprite.x, enemy.sprite.y, 'coin') as Phaser.Physics.Arcade.Sprite;
       if (coin) {
-        coin.setData('gold', Phaser.Math.Between(3, 8 + this.chapter * 2));
+        coin.setData('gold', enemy.goldValue);
         coin.setDepth(3);
         coin.setVelocity(Phaser.Math.Between(-20, 20), Phaser.Math.Between(-20, 20));
         coin.setDrag(80);
       }
     }
 
-    // Remove from active enemies
+    // Remove enemy
     enemy.destroy();
     this.enemies = this.enemies.filter(e => e !== enemy);
 
-    // Check if wave/room cleared
+    // Check wave clear
     const alive = this.enemies.filter(e => e.sprite.active);
     if (alive.length === 0) {
-      if (this.wave < WAVES_PER_ROOM && (this.room + 1) % BOSS_ROOM_INTERVAL !== 0) {
-        // Next wave
-        this.time.delayedCall(1000, () => this.spawnWave());
-      } else {
-        // Room cleared!
-        this.roomCleared = true;
-        this.showRoomClearMessage();
-      }
+      this.onWaveClear();
     }
   }
 
-  private showRoomClearMessage(): void {
-    const { width, height } = this.scale;
+  private onWaveClear(): void {
+    const wasBossWave = (this.wave + 1) % BOSS_WAVE_INTERVAL === 0;
 
-    const clearText = this.add.text(width / 2, height / 2 - 60, 'ROOM CLEARED!', {
-      fontSize: '28px',
-      color: '#ffd54f',
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(100);
+    // Reward gold + essence
+    const goldReward = 10 + this.wave * 2 + (wasBossWave ? 30 : 0);
+    const essenceReward = wasBossWave ? 5 : 1;
+    this.runGold += goldReward;
+    this.runEssence += essenceReward;
 
-    this.tweens.add({
-      targets: clearText,
-      alpha: 0,
-      duration: 2000,
-      delay: 1000,
-      onComplete: () => clearText.destroy(),
-    });
+    CenterMessage.show(this, 'WAVE CLEARED!', '#ffd54f', 1500);
 
-    // Spawn door
-    this.door = this.add.image(width / 2, 80, 'door').setDepth(9);
-    this.tweens.add({
-      targets: this.door,
-      scaleX: { from: 0, to: 1 },
-      scaleY: { from: 0, to: 1 },
-      duration: 500,
-      ease: 'Back.easeOut',
-    });
+    this.wave++;
 
-    // Arrow pointing to door
-    const arrowText = this.add.text(width / 2, 140, '▲', {
-      fontSize: '24px',
-      color: '#ffd54f',
-      fontFamily: 'Arial',
-    }).setOrigin(0.5).setDepth(100);
-
-    this.tweens.add({
-      targets: arrowText,
-      y: 130,
-      duration: 500,
-      yoyo: true,
-      repeat: -1,
-    });
-  }
-
-  private nextRoom(): void {
-    if (this.transitioning) return;
-    this.transitioning = true;
-
-    const { width, height } = this.scale;
-
-    // Clean up
-    if (this.door) {
-      this.door.destroy();
-      this.door = null;
+    // Check stage complete (wave 30)
+    if (this.wave >= WAVES_PER_STAGE) {
+      this.onStageComplete();
+      return;
     }
 
-    // Transition effect
-    const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0)
-      .setDepth(200);
-
-    this.tweens.add({
-      targets: overlay,
-      alpha: 1,
-      duration: 300,
-      onComplete: () => {
-        // Advance room
-        this.room++;
-        this.wave = 0;
-        this.roomCleared = false;
-
-        // Check chapter advance
-        if (this.room >= ROOMS_PER_CHAPTER) {
-          this.chapter++;
-          this.room = 0;
-        }
-
-        // Clean up old enemies
-        this.enemies.forEach(e => e.destroy());
-        this.enemies = [];
-
-        // Clean up bullets
-        this.enemyBullets.clear(true, true);
-        this.xpOrbs.clear(true, true);
-        this.coins.clear(true, true);
-
-        // Reset player position
-        this.player.sprite.setPosition(width / 2, height - 200);
-
-        // Update HUD
-        this.hud.update();
-
-        // Fade back in
-        this.tweens.add({
-          targets: overlay,
-          alpha: 0,
-          duration: 300,
-          onComplete: () => {
-            overlay.destroy();
-            this.transitioning = false;
-            this.time.delayedCall(500, () => this.spawnWave());
+    if (wasBossWave) {
+      // After boss: shop → upgrade draft → next wave
+      this.time.delayedCall(1500, () => {
+        this.phase = 'shop';
+        new ShopOverlay(
+          this,
+          this.runGold,
+          (itemId, cost) => this.handleShopBuy(itemId, cost),
+          () => {
+            // After shop, show upgrade draft
+            this.phase = 'upgrade';
+            new UpgradeDraftOverlay(this, this.upgradeLevels, (upgradeId) => {
+              this.applyUpgrade(upgradeId);
+              this.phase = 'playing';
+              this.time.delayedCall(500, () => this.spawnWave());
+            });
           },
-        });
-      },
+        );
+      });
+    } else {
+      // Non-boss: directly next wave
+      this.time.delayedCall(1500, () => this.spawnWave());
+    }
+  }
+
+  private onStageComplete(): void {
+    // Save checkpoint
+    const save = SaveManager.getData();
+    this.stage++;
+    if (this.stage > save.bestStage) {
+      save.bestStage = this.stage;
+    }
+    save.stageCheckpoint = this.stage;
+    SaveManager.save();
+
+    CenterMessage.show(this, `STAGE ${this.stage - 1} COMPLETE!`, '#4ecdc4', 2000);
+
+    // Reset wave, continue
+    this.wave = 0;
+    this.time.delayedCall(2500, () => {
+      // Clean up
+      this.enemies.forEach(e => e.destroy());
+      this.enemies = [];
+      this.enemyBullets.clear(true, true);
+      this.xpOrbs.clear(true, true);
+      this.coins.clear(true, true);
+      this.player.sprite.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+      this.spawnWave();
     });
+  }
+
+  private handleShopBuy(itemId: string, cost: number): boolean {
+    if (this.runGold < cost) return false;
+
+    this.runGold -= cost;
+    const item = SHOP_ITEMS.find(s => s.id === itemId);
+    if (!item) return false;
+
+    const time = this.time.now;
+    switch (item.effect) {
+      case 'heal_40':
+        this.player.heal(40);
+        break;
+      case 'mana_30':
+        this.player.restoreMana(30);
+        break;
+      case 'damage_buff':
+        this.player.damageBuff = 1;
+        this.player.damageBuff_timer = time + 60000;
+        break;
+      case 'defense_buff':
+        this.player.defenseBuff = 1;
+        this.player.defenseBuff_timer = time + 60000;
+        break;
+      case 'weapon_damage_5':
+        this.player.weaponDamageBonus += 5;
+        break;
+      case 'weapon_speed_10':
+        this.player.weaponSpeedBonus += 0.1;
+        break;
+      case 'weapon_range_15':
+        this.player.weaponRangeBonus += 0.15;
+        break;
+    }
+
+    return true;
+  }
+
+  private applyUpgrade(upgradeId: string): void {
+    if (!this.upgradeLevels[upgradeId]) this.upgradeLevels[upgradeId] = 0;
+    this.upgradeLevels[upgradeId]++;
+
+    // Recompute effects
+    const effects: UpgradeEffect[] = [];
+    for (const [id, count] of Object.entries(this.upgradeLevels)) {
+      const upg = UPGRADES.find(u => u.id === id);
+      if (upg) effects.push(upg.apply(count));
+    }
+    this.player.applyUpgrades(effects);
   }
 
   private addXp(amount: number): void {
     this.player.xp += amount;
-    const xpNeeded = getXpForLevel(this.player.level);
-
-    if (this.player.xp >= xpNeeded) {
-      this.player.xp -= xpNeeded;
+    const needed = getXpForLevel(this.player.level);
+    if (this.player.xp >= needed) {
+      this.player.xp -= needed;
       this.player.level++;
-
-      // Trigger level-up scene
-      this.scene.pause();
-      this.scene.launch('LevelUpScene', {
-        abilityLevels: this.abilityLevels,
-        playerLevel: this.player.level,
-      });
+      CenterMessage.show(this, `LEVEL UP! (Lv ${this.player.level})`, '#00e5ff', 1500);
     }
   }
 
-  applyAbilityChoice(abilityId: string): void {
-    if (!this.abilityLevels[abilityId]) {
-      this.abilityLevels[abilityId] = 0;
+  private onDeath(): void {
+    this.phase = 'dead';
+
+    // Bank resources
+    const save = SaveManager.getData();
+    save.goldBank += this.runGold;
+    save.essence += this.runEssence;
+    save.heroXp += this.player.killCount;
+    // Level up check
+    const xpNeeded = 50 + save.heroLevel * 20;
+    if (save.heroXp >= xpNeeded) {
+      save.heroXp -= xpNeeded;
+      save.heroLevel++;
     }
-    this.abilityLevels[abilityId]++;
-
-    // Recompute all effects
-    this.abilityEffects = [];
-    for (const [id, level] of Object.entries(this.abilityLevels)) {
-      const ability = ABILITIES.find(a => a.id === id);
-      if (ability) {
-        this.abilityEffects.push(ability.apply(level as number));
-      }
-    }
-
-    this.player.applyAbilities(this.abilityEffects);
-    this.scene.resume();
-  }
-
-  private gameOver(): void {
-    // Save progress
-    SaveManager.addGold(this.goldEarned);
-    SaveManager.addKills(this.player.killCount);
-    SaveManager.updateProgress(this.chapter, this.room);
+    SaveManager.save();
 
     this.scene.start('GameOverScene', {
-      chapter: this.chapter,
-      room: this.room,
-      gold: this.goldEarned,
+      stage: this.stage,
+      wave: this.wave,
+      gold: this.runGold,
+      essence: this.runEssence,
       kills: this.player.killCount,
       level: this.player.level,
     });
@@ -549,7 +516,7 @@ export class GameScene extends Phaser.Scene {
     this.player?.destroy();
     this.enemies.forEach(e => e.destroy());
     this.combat?.destroy();
-    this.joystick?.destroy();
+    this.input_sys?.destroy();
     this.hud?.destroy();
   }
 }

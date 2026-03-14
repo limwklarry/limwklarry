@@ -10,31 +10,43 @@ export class Enemy {
   attack: number;
   speed: number;
   xpValue: number;
+  goldValue: number;
   hpBar: Phaser.GameObjects.Graphics;
   frozen = false;
-  poisoned = false;
-  poisonTimer?: Phaser.Time.TimerEvent;
+  slowed = false;
+  slowTimer?: Phaser.Time.TimerEvent;
   shootTimer?: Phaser.Time.TimerEvent;
-  behaviorTimer?: Phaser.Time.TimerEvent;
-  circleAngle = 0;
+
+  // Charger state
+  private chargeTimer = 0;
+  private charging = false;
+  private chargeTarget = { x: 0, y: 0 };
+  private chargeCooldown = 3000;
+  private lastChargeTime = 0;
+
+  // Boss state
+  private bossPhase2 = false;
+  private bossShootTimer = 0;
+  private bossDashCooldown = 0;
+  private bossDashing = false;
 
   constructor(
     scene: Phaser.Scene,
     x: number,
     y: number,
     def: EnemyDefinition,
-    chapter: number,
-    room: number,
+    stage: number,
+    wave: number,
   ) {
     this.scene = scene;
     this.definition = def;
 
-    // Scale stats
-    this.maxHp = scaleEnemyStat(def.hp, chapter, room);
+    this.maxHp = scaleEnemyStat(def.hp, stage, wave);
     this.hp = this.maxHp;
-    this.attack = scaleEnemyStat(def.attack, chapter, room);
+    this.attack = scaleEnemyStat(def.attack, stage, wave);
     this.speed = def.speed;
-    this.xpValue = scaleEnemyStat(def.xpValue, chapter, room);
+    this.xpValue = scaleEnemyStat(def.xpValue, stage, wave);
+    this.goldValue = scaleEnemyStat(def.goldValue, stage, wave);
 
     // Generate texture
     const textureKey = `enemy_${def.id}`;
@@ -44,10 +56,10 @@ export class Enemy {
       AssetGenerator.generateEnemyTexture(scene, textureKey, def.color, def.size);
     }
 
-    // Create sprite
     this.sprite = scene.physics.add.sprite(x, y, textureKey);
     this.sprite.setDepth(5);
     this.sprite.setData('enemy', this);
+    this.sprite.setCollideWorldBounds(true);
 
     const bodySize = def.size * 1.5;
     this.sprite.body?.setSize(bodySize, bodySize);
@@ -56,168 +68,207 @@ export class Enemy {
       (this.sprite.height - bodySize) / 2,
     );
 
-    // HP bar
     this.hpBar = scene.add.graphics().setDepth(6);
     this.updateHpBar();
 
-    // Start behavior
-    this.startBehavior();
+    // Start ranged shooting
+    if (def.behavior === 'ranger') {
+      this.shootTimer = scene.time.addEvent({
+        delay: 2500,
+        callback: () => this.shoot(),
+        loop: true,
+      });
+    }
+    if (def.behavior === 'boss') {
+      this.shootTimer = scene.time.addEvent({
+        delay: 1800,
+        callback: () => this.bossShoot(),
+        loop: true,
+      });
+    }
   }
 
-  private startBehavior(): void {
+  private shoot(): void {
+    if (!this.sprite.active || this.frozen) return;
     const gameScene = this.scene as any;
+    const player = gameScene.player;
+    if (!player?.sprite?.active) return;
 
-    if (this.definition.behavior === 'ranged' || this.definition.behavior === 'boss') {
-      this.shootTimer = this.scene.time.addEvent({
-        delay: this.definition.behavior === 'boss' ? 1500 : 2500,
-        callback: () => this.shoot(gameScene),
-        loop: true,
-      });
-    }
-
-    if (this.definition.behavior === 'burst') {
-      this.behaviorTimer = this.scene.time.addEvent({
-        delay: 3000,
-        callback: () => this.burstAttack(gameScene),
-        loop: true,
-      });
-    }
-  }
-
-  private shoot(gameScene: any): void {
-    if (!this.sprite.active || !gameScene.player?.sprite?.active) return;
-
-    const player = gameScene.player.sprite;
     const angle = Phaser.Math.Angle.Between(
       this.sprite.x, this.sprite.y,
-      player.x, player.y,
+      player.sprite.x, player.sprite.y,
+    );
+    this.createBullet(angle);
+  }
+
+  private bossShoot(): void {
+    if (!this.sprite.active || this.frozen) return;
+    const gameScene = this.scene as any;
+    const player = gameScene.player;
+    if (!player?.sprite?.active) return;
+
+    const angle = Phaser.Math.Angle.Between(
+      this.sprite.x, this.sprite.y,
+      player.sprite.x, player.sprite.y,
     );
 
-    this.createBullet(angle, gameScene);
+    // Aimed shots
+    this.createBullet(angle);
+    this.createBullet(angle - 0.25);
+    this.createBullet(angle + 0.25);
 
-    // Boss shoots additional bullets
-    if (this.definition.behavior === 'boss') {
-      this.createBullet(angle - 0.3, gameScene);
-      this.createBullet(angle + 0.3, gameScene);
+    // Phase 2: radial burst
+    if (this.bossPhase2) {
+      for (let i = 0; i < 8; i++) {
+        this.createBullet((i * Math.PI * 2) / 8);
+      }
     }
   }
 
-  private burstAttack(gameScene: any): void {
-    if (!this.sprite.active) return;
-
-    // Fire in 8 directions
-    for (let i = 0; i < 8; i++) {
-      const angle = (i * Math.PI * 2) / 8;
-      this.createBullet(angle, gameScene);
-    }
-  }
-
-  private createBullet(angle: number, gameScene: any): void {
+  private createBullet(angle: number): void {
+    const gameScene = this.scene as any;
     if (!gameScene.enemyBullets) return;
 
     const bullet = gameScene.enemyBullets.create(
-      this.sprite.x,
-      this.sprite.y,
-      'enemy_bullet',
+      this.sprite.x, this.sprite.y, 'enemy_bullet',
     ) as Phaser.Physics.Arcade.Sprite;
-
     if (!bullet) return;
 
     bullet.setDepth(4);
-    const speed = 180;
-    bullet.setVelocity(
-      Math.cos(angle) * speed,
-      Math.sin(angle) * speed,
-    );
+    const speed = 200;
+    bullet.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
     bullet.setData('damage', this.attack);
 
-    // Auto-destroy after 3 seconds
     this.scene.time.delayedCall(3000, () => {
       if (bullet.active) bullet.destroy();
     });
   }
 
-  update(playerX: number, playerY: number): void {
-    if (!this.sprite.active || this.frozen) {
-      if (this.frozen) {
-        this.sprite.setVelocity(0, 0);
-      }
+  update(playerX: number, playerY: number, time: number): void {
+    if (!this.sprite.active) return;
+    if (this.frozen) {
+      this.sprite.setVelocity(0, 0);
       return;
     }
 
     this.updateHpBar();
+    const effectiveSpeed = this.slowed ? this.speed * 0.5 : this.speed;
 
     switch (this.definition.behavior) {
-      case 'chase':
+      case 'grunt':
+        this.behaviorGrunt(playerX, playerY, effectiveSpeed);
+        break;
+      case 'ranger':
+        this.behaviorRanger(playerX, playerY, effectiveSpeed);
+        break;
+      case 'charger':
+        this.behaviorCharger(playerX, playerY, effectiveSpeed, time);
+        break;
       case 'boss':
-        this.chasePlayer(playerX, playerY);
-        break;
-      case 'ranged':
-        this.keepDistance(playerX, playerY, 150);
-        break;
-      case 'circle':
-        this.circlePlayer(playerX, playerY);
-        break;
-      case 'burst':
-        this.keepDistance(playerX, playerY, 120);
+        this.behaviorBoss(playerX, playerY, effectiveSpeed, time);
         break;
     }
   }
 
-  private chasePlayer(px: number, py: number): void {
-    const angle = Phaser.Math.Angle.Between(
-      this.sprite.x, this.sprite.y, px, py,
-    );
-    this.sprite.setVelocity(
-      Math.cos(angle) * this.speed,
-      Math.sin(angle) * this.speed,
-    );
+  private behaviorGrunt(px: number, py: number, spd: number): void {
+    const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, px, py);
+    this.sprite.setVelocity(Math.cos(angle) * spd, Math.sin(angle) * spd);
   }
 
-  private keepDistance(px: number, py: number, dist: number): void {
+  private behaviorRanger(px: number, py: number, spd: number): void {
     const d = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, px, py);
     const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, px, py);
 
-    if (d < dist - 30) {
-      // Too close, back away
-      this.sprite.setVelocity(
-        -Math.cos(angle) * this.speed * 0.5,
-        -Math.sin(angle) * this.speed * 0.5,
-      );
-    } else if (d > dist + 30) {
-      // Too far, approach
-      this.sprite.setVelocity(
-        Math.cos(angle) * this.speed * 0.7,
-        Math.sin(angle) * this.speed * 0.7,
-      );
+    if (d < 120) {
+      // Kite: back away
+      this.sprite.setVelocity(-Math.cos(angle) * spd * 0.6, -Math.sin(angle) * spd * 0.6);
+    } else if (d > 200) {
+      this.sprite.setVelocity(Math.cos(angle) * spd * 0.7, Math.sin(angle) * spd * 0.7);
     } else {
       // Strafe
       this.sprite.setVelocity(
-        Math.cos(angle + Math.PI / 2) * this.speed * 0.4,
-        Math.sin(angle + Math.PI / 2) * this.speed * 0.4,
+        Math.cos(angle + Math.PI / 2) * spd * 0.4,
+        Math.sin(angle + Math.PI / 2) * spd * 0.4,
       );
     }
   }
 
-  private circlePlayer(px: number, py: number): void {
-    this.circleAngle += 0.02;
-    const radius = 100;
-    const targetX = px + Math.cos(this.circleAngle) * radius;
-    const targetY = py + Math.sin(this.circleAngle) * radius;
+  private behaviorCharger(px: number, py: number, spd: number, time: number): void {
+    if (this.charging) {
+      // Continue charge dash
+      const angle = Phaser.Math.Angle.Between(
+        this.sprite.x, this.sprite.y, this.chargeTarget.x, this.chargeTarget.y,
+      );
+      this.sprite.setVelocity(Math.cos(angle) * spd * 2.5, Math.sin(angle) * spd * 2.5);
+      const dist = Phaser.Math.Distance.Between(
+        this.sprite.x, this.sprite.y, this.chargeTarget.x, this.chargeTarget.y,
+      );
+      if (dist < 20 || time > this.chargeTimer + 800) {
+        this.charging = false;
+        this.lastChargeTime = time;
+      }
+      return;
+    }
 
-    const angle = Phaser.Math.Angle.Between(
-      this.sprite.x, this.sprite.y, targetX, targetY,
-    );
-    this.sprite.setVelocity(
-      Math.cos(angle) * this.speed,
-      Math.sin(angle) * this.speed,
-    );
+    // Normal chase
+    const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, px, py);
+    this.sprite.setVelocity(Math.cos(angle) * spd * 0.6, Math.sin(angle) * spd * 0.6);
+
+    // Initiate charge
+    const d = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, px, py);
+    if (d < 200 && time - this.lastChargeTime > this.chargeCooldown) {
+      this.charging = true;
+      this.chargeTimer = time;
+      this.chargeTarget = { x: px, y: py };
+      // Flash before charging
+      this.sprite.setTint(0xffffff);
+      this.scene.time.delayedCall(150, () => {
+        if (this.sprite.active) this.sprite.clearTint();
+      });
+    }
+  }
+
+  private behaviorBoss(px: number, py: number, spd: number, time: number): void {
+    // Phase check
+    if (!this.bossPhase2 && this.hp < this.maxHp * 0.5) {
+      this.bossPhase2 = true;
+      // Visual feedback for phase change
+      this.sprite.setTint(0xff4444);
+      this.scene.time.delayedCall(300, () => {
+        if (this.sprite.active) this.sprite.clearTint();
+      });
+    }
+
+    // Dash attack
+    if (this.bossDashing) {
+      const dist = Phaser.Math.Distance.Between(
+        this.sprite.x, this.sprite.y, this.chargeTarget.x, this.chargeTarget.y,
+      );
+      if (dist < 30 || time > this.bossDashCooldown + 1000) {
+        this.bossDashing = false;
+      }
+      return; // Keep current velocity during dash
+    }
+
+    // Initiate dash (more frequent in phase 2)
+    const dashInterval = this.bossPhase2 ? 4000 : 6000;
+    if (time - this.bossDashCooldown > dashInterval) {
+      this.bossDashing = true;
+      this.bossDashCooldown = time;
+      this.chargeTarget = { x: px, y: py };
+      const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, px, py);
+      this.sprite.setVelocity(Math.cos(angle) * spd * 3, Math.sin(angle) * spd * 3);
+      return;
+    }
+
+    // Normal chase
+    const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, px, py);
+    this.sprite.setVelocity(Math.cos(angle) * spd, Math.sin(angle) * spd);
   }
 
   takeDamage(amount: number, isCrit: boolean): boolean {
     this.hp -= amount;
 
-    // Damage number
     const color = isCrit ? '#ffd54f' : '#ffffff';
     const text = this.scene.add.text(
       this.sprite.x + Phaser.Math.Between(-10, 10),
@@ -241,7 +292,7 @@ export class Enemy {
       onComplete: () => text.destroy(),
     });
 
-    // Flash white
+    // Hit flash
     this.sprite.setTint(0xffffff);
     this.scene.time.delayedCall(80, () => {
       if (this.sprite.active) this.sprite.clearTint();
@@ -251,28 +302,13 @@ export class Enemy {
     return this.hp <= 0;
   }
 
-  applyPoison(damage: number): void {
-    if (this.poisoned) return;
-    this.poisoned = true;
-    this.sprite.setTint(0x66bb6a);
-
-    let ticks = 0;
-    this.poisonTimer = this.scene.time.addEvent({
-      delay: 500,
-      repeat: 5,
-      callback: () => {
-        if (!this.sprite.active) return;
-        this.hp -= damage;
-        ticks++;
-        if (ticks >= 5) {
-          this.poisoned = false;
-          if (this.sprite.active) this.sprite.clearTint();
-        }
-        this.updateHpBar();
-        if (this.hp <= 0) {
-          (this.scene as any).onEnemyKilled?.(this);
-        }
-      },
+  applySlow(duration: number): void {
+    this.slowed = true;
+    this.sprite.setTint(0x7c4dff);
+    if (this.slowTimer) this.slowTimer.destroy();
+    this.slowTimer = this.scene.time.delayedCall(duration, () => {
+      this.slowed = false;
+      if (this.sprite.active) this.sprite.clearTint();
     });
   }
 
@@ -294,11 +330,9 @@ export class Enemy {
     const x = this.sprite.x - barW / 2;
     const y = this.sprite.y - this.definition.size - 8;
 
-    // Background
     this.hpBar.fillStyle(0x333333, 1);
     this.hpBar.fillRect(x, y, barW, barH);
 
-    // HP fill
     const ratio = Math.max(0, this.hp / this.maxHp);
     const color = ratio > 0.5 ? 0x66bb6a : ratio > 0.25 ? 0xffa726 : 0xff4444;
     this.hpBar.fillStyle(color, 1);
@@ -307,8 +341,7 @@ export class Enemy {
 
   destroy(): void {
     this.shootTimer?.destroy();
-    this.behaviorTimer?.destroy();
-    this.poisonTimer?.destroy();
+    this.slowTimer?.destroy();
     this.hpBar.destroy();
     this.sprite.destroy();
   }

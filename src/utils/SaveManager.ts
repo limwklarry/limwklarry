@@ -1,6 +1,6 @@
 import { SaveData, getDefaultSaveData } from '../data/GameData';
 
-const SAVE_KEY = 'archero_save';
+const SAVE_KEY = 'archero_save_v2';
 
 export class SaveManager {
   private static data: SaveData | null = null;
@@ -22,7 +22,11 @@ export class SaveManager {
 
   static save(): void {
     if (this.data) {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
+      } catch {
+        // Storage full or unavailable
+      }
     }
   }
 
@@ -31,53 +35,12 @@ export class SaveManager {
   }
 
   static addGold(amount: number): void {
-    this.load().gold += amount;
+    this.load().goldBank += amount;
     this.save();
   }
 
-  static addGems(amount: number): void {
-    this.load().gems += amount;
-    this.save();
-  }
-
-  static unlockHero(heroId: string): boolean {
-    const data = this.load();
-    if (data.unlockedHeroes.includes(heroId)) return false;
-    data.unlockedHeroes.push(heroId);
-    this.save();
-    return true;
-  }
-
-  static selectHero(heroId: string): void {
-    this.load().selectedHero = heroId;
-    this.save();
-  }
-
-  static equipItem(itemId: string, slot: string): void {
-    this.load().equippedItems[slot] = itemId;
-    this.save();
-  }
-
-  static addItem(itemId: string): void {
-    const data = this.load();
-    if (!data.ownedItems.includes(itemId)) {
-      data.ownedItems.push(itemId);
-      this.save();
-    }
-  }
-
-  static updateProgress(chapter: number, room: number): void {
-    const data = this.load();
-    if (chapter > data.highestChapter || (chapter === data.highestChapter && room > data.highestRoom)) {
-      data.highestChapter = chapter;
-      data.highestRoom = room;
-    }
-    data.totalRuns++;
-    this.save();
-  }
-
-  static addKills(count: number): void {
-    this.load().totalKills += count;
+  static addEssence(amount: number): void {
+    this.load().essence += amount;
     this.save();
   }
 

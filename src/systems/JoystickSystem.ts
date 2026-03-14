@@ -1,83 +1,125 @@
-export class JoystickSystem {
+// InputSystem replaces JoystickSystem — handles WASD + mouse input
+export class InputSystem {
   scene: Phaser.Scene;
-  base: Phaser.GameObjects.Image;
-  thumb: Phaser.GameObjects.Image;
-  isActive = false;
+  keys!: {
+    W: Phaser.Input.Keyboard.Key;
+    A: Phaser.Input.Keyboard.Key;
+    S: Phaser.Input.Keyboard.Key;
+    D: Phaser.Input.Keyboard.Key;
+    I: Phaser.Input.Keyboard.Key;
+    P: Phaser.Input.Keyboard.Key;
+    O: Phaser.Input.Keyboard.Key;
+    H: Phaser.Input.Keyboard.Key;
+    R: Phaser.Input.Keyboard.Key;
+    ESC: Phaser.Input.Keyboard.Key;
+  };
   direction = { x: 0, y: 0 };
-  private pointerId: number | null = null;
-  private baseX: number;
-  private baseY: number;
-  private maxRadius = 50;
+  mouseWorldX = 0;
+  mouseWorldY = 0;
+  aimAngle = 0;
+  leftClick = false;
+  rightClick = false;
+  leftDown = false;
+
+  // Key-just-pressed flags (consumed after reading)
+  private justI = false;
+  private justP = false;
+  private justO = false;
+  private justH = false;
+  private justR = false;
+  private justESC = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
 
-    // Position joystick in bottom-left area
-    this.baseX = 100;
-    this.baseY = scene.scale.height - 150;
+    if (!scene.input.keyboard) return;
 
-    this.base = scene.add.image(this.baseX, this.baseY, 'joystick_base')
-      .setDepth(50)
-      .setAlpha(0);
+    this.keys = {
+      W: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+      A: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+      S: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+      D: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+      I: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I),
+      P: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P),
+      O: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.O),
+      H: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.H),
+      R: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R),
+      ESC: scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
+    };
 
-    this.thumb = scene.add.image(this.baseX, this.baseY, 'joystick_thumb')
-      .setDepth(51)
-      .setAlpha(0);
-
-    // Touch/mouse input
+    // Mouse click events
     scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      // Only use left half of screen for joystick
-      if (pointer.x < scene.scale.width * 0.6 && this.pointerId === null) {
-        this.pointerId = pointer.id;
-        this.isActive = true;
-        this.baseX = pointer.x;
-        this.baseY = pointer.y;
-        this.base.setPosition(this.baseX, this.baseY).setAlpha(1);
-        this.thumb.setPosition(this.baseX, this.baseY).setAlpha(1);
-      }
-    });
-
-    scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.id !== this.pointerId || !this.isActive) return;
-
-      const dx = pointer.x - this.baseX;
-      const dy = pointer.y - this.baseY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist > 0) {
-        const clampedDist = Math.min(dist, this.maxRadius);
-        const nx = dx / dist;
-        const ny = dy / dist;
-
-        this.thumb.setPosition(
-          this.baseX + nx * clampedDist,
-          this.baseY + ny * clampedDist,
-        );
-
-        this.direction.x = nx;
-        this.direction.y = ny;
-      }
-    });
-
-    scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.id === this.pointerId) {
-        this.release();
-      }
+      if (pointer.leftButtonDown()) this.leftClick = true;
+      if (pointer.rightButtonDown()) this.rightClick = true;
     });
   }
 
-  private release(): void {
-    this.isActive = false;
-    this.pointerId = null;
+  update(): void {
+    // Movement direction
     this.direction.x = 0;
     this.direction.y = 0;
-    this.base.setAlpha(0);
-    this.thumb.setAlpha(0);
-    this.thumb.setPosition(this.baseX, this.baseY);
+    if (this.keys) {
+      if (this.keys.A.isDown) this.direction.x -= 1;
+      if (this.keys.D.isDown) this.direction.x += 1;
+      if (this.keys.W.isDown) this.direction.y -= 1;
+      if (this.keys.S.isDown) this.direction.y += 1;
+    }
+
+    // Normalize diagonal
+    if (this.direction.x !== 0 && this.direction.y !== 0) {
+      const len = Math.sqrt(this.direction.x * this.direction.x + this.direction.y * this.direction.y);
+      this.direction.x /= len;
+      this.direction.y /= len;
+    }
+
+    // Mouse position and aim
+    const pointer = this.scene.input.activePointer;
+    this.mouseWorldX = pointer.worldX;
+    this.mouseWorldY = pointer.worldY;
+    this.leftDown = pointer.leftButtonDown();
+
+    // Just-pressed detection
+    if (this.keys) {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.I)) this.justI = true;
+      if (Phaser.Input.Keyboard.JustDown(this.keys.P)) this.justP = true;
+      if (Phaser.Input.Keyboard.JustDown(this.keys.O)) this.justO = true;
+      if (Phaser.Input.Keyboard.JustDown(this.keys.H)) this.justH = true;
+      if (Phaser.Input.Keyboard.JustDown(this.keys.R)) this.justR = true;
+      if (Phaser.Input.Keyboard.JustDown(this.keys.ESC)) this.justESC = true;
+    }
+  }
+
+  updateAimAngle(playerX: number, playerY: number): void {
+    this.aimAngle = Math.atan2(
+      this.mouseWorldY - playerY,
+      this.mouseWorldX - playerX,
+    );
+  }
+
+  consumeLeftClick(): boolean {
+    if (this.leftClick) { this.leftClick = false; return true; }
+    return false;
+  }
+
+  consumeRightClick(): boolean {
+    if (this.rightClick) { this.rightClick = false; return true; }
+    return false;
+  }
+
+  consumeKey(key: 'I' | 'P' | 'O' | 'H' | 'R' | 'ESC'): boolean {
+    const field = `just${key}` as keyof this;
+    if (this[field]) {
+      (this as any)[field] = false;
+      return true;
+    }
+    return false;
+  }
+
+  get isMoving(): boolean {
+    return this.direction.x !== 0 || this.direction.y !== 0;
   }
 
   destroy(): void {
-    this.base.destroy();
-    this.thumb.destroy();
+    // Keys are cleaned up by scene
   }
 }

@@ -2,50 +2,252 @@
 // Game Constants & Data Definitions
 // ============================================================
 
-export interface HeroDefinition {
+export const GAME_WIDTH = 960;
+export const GAME_HEIGHT = 640;
+export const ARENA_PADDING = 40;
+
+// ============================================================
+// Weapon Definitions
+// ============================================================
+export interface WeaponDefinition {
   id: string;
   name: string;
   description: string;
-  baseHp: number;
-  baseAttack: number;
-  baseSpeed: number;
-  attackSpeed: number;
+  baseDamage: number;
+  attackSpeed: number; // ms between attacks
+  range: number; // pixels
+  type: 'melee' | 'projectile';
+  projectileSpeed?: number;
+  pierce?: boolean;
   color: number;
-  unlockCost: number;
-  specialAbility: string;
 }
 
-export interface AbilityDefinition {
+export const WEAPONS: WeaponDefinition[] = [
+  {
+    id: 'sword',
+    name: 'Sword Slash',
+    description: 'Shortest range, slowest speed, highest damage. Melee arc attack.',
+    baseDamage: 25,
+    attackSpeed: 900,
+    range: 70,
+    type: 'melee',
+    color: 0xcccccc,
+  },
+  {
+    id: 'shuriken',
+    name: 'Shuriken',
+    description: 'Medium range, medium speed, medium damage. Can pierce.',
+    baseDamage: 15,
+    attackSpeed: 600,
+    range: 300,
+    type: 'projectile',
+    projectileSpeed: 350,
+    pierce: false,
+    color: 0x90a4ae,
+  },
+  {
+    id: 'bow',
+    name: 'Bow & Arrow',
+    description: 'Longest range, medium speed, lowest damage. Fast projectile.',
+    baseDamage: 10,
+    attackSpeed: 650,
+    range: 500,
+    type: 'projectile',
+    projectileSpeed: 550,
+    color: 0x8d6e63,
+  },
+];
+
+// ============================================================
+// Special Skill Definitions
+// ============================================================
+export interface SkillDefinition {
   id: string;
   name: string;
   description: string;
-  icon: string;
-  maxLevel: number;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  apply: (level: number) => AbilityEffect;
+  mpCost: number;
+  cooldown: number; // ms
+  color: number;
 }
 
-export interface AbilityEffect {
-  attackBonus?: number;
-  attackSpeedBonus?: number;
-  hpBonus?: number;
-  speedBonus?: number;
-  projectileCount?: number;
-  piercing?: boolean;
-  bouncing?: boolean;
-  diagonalArrows?: boolean;
-  rearArrow?: boolean;
-  multishot?: boolean;
-  critChance?: number;
-  critDamage?: number;
-  lifeSteal?: number;
-  shield?: number;
-  poisonDamage?: number;
-  freezeChance?: number;
-  fireTrail?: boolean;
-  orbitalCount?: number;
+export const SKILLS: SkillDefinition[] = [
+  {
+    id: 'epicenter',
+    name: 'Epicenter',
+    description: 'AoE burst centered on player. Damages and slows nearby enemies.',
+    mpCost: 30,
+    cooldown: 8000,
+    color: 0x7c4dff,
+  },
+  {
+    id: 'glacier',
+    name: 'Glacier',
+    description: 'Creates a zone. While inside: +attack speed, +range, +damage.',
+    mpCost: 25,
+    cooldown: 12000,
+    color: 0x40c4ff,
+  },
+  {
+    id: 'volcano',
+    name: 'Volcano',
+    description: 'Spawns random meteor strikes that damage enemies in radius.',
+    mpCost: 35,
+    cooldown: 10000,
+    color: 0xff6d00,
+  },
+];
+
+// ============================================================
+// Upgrade Definitions (run powerups)
+// ============================================================
+export interface UpgradeDefinition {
+  id: string;
+  name: string;
+  description: string;
+  rarity: 'common' | 'rare';
+  maxStacks: number;
+  apply: (stacks: number) => UpgradeEffect;
 }
 
+export interface UpgradeEffect {
+  projectileBonus?: number;
+  attackSpeedMult?: number;
+  damageMult?: number;
+  speedMult?: number;
+  lifestealPercent?: number;
+  armorBonus?: number;
+  hpRegenBonus?: number;
+  maxHpBonus?: number;
+  mpRegenBonus?: number;
+  maxMpBonus?: number;
+  critDamageBonus?: number;
+  critChanceBonus?: number;
+}
+
+export const UPGRADES: UpgradeDefinition[] = [
+  {
+    id: 'projectile',
+    name: '+1 Projectile',
+    description: '+1 extra projectile per attack',
+    rarity: 'rare',
+    maxStacks: 3,
+    apply: (n) => ({ projectileBonus: n }),
+  },
+  {
+    id: 'attack_speed',
+    name: '+Attack Speed',
+    description: '+12% attack speed',
+    rarity: 'common',
+    maxStacks: 5,
+    apply: (n) => ({ attackSpeedMult: 1 + n * 0.12 }),
+  },
+  {
+    id: 'damage',
+    name: '+Damage',
+    description: '+15% damage',
+    rarity: 'common',
+    maxStacks: 5,
+    apply: (n) => ({ damageMult: 1 + n * 0.15 }),
+  },
+  {
+    id: 'move_speed',
+    name: '+Movement Speed',
+    description: '+10% movement speed',
+    rarity: 'common',
+    maxStacks: 5,
+    apply: (n) => ({ speedMult: 1 + n * 0.10 }),
+  },
+  {
+    id: 'lifesteal',
+    name: '+1% Lifesteal',
+    description: 'Heal 1% of damage dealt per stack',
+    rarity: 'common',
+    maxStacks: 5,
+    apply: (n) => ({ lifestealPercent: n * 0.01 }),
+  },
+  {
+    id: 'armour',
+    name: '+Armour',
+    description: '+3 armour (flat damage reduction)',
+    rarity: 'common',
+    maxStacks: 5,
+    apply: (n) => ({ armorBonus: n * 3 }),
+  },
+  {
+    id: 'hp_regen',
+    name: '+HP Regen',
+    description: '+1 HP/s regen',
+    rarity: 'common',
+    maxStacks: 5,
+    apply: (n) => ({ hpRegenBonus: n * 1 }),
+  },
+  {
+    id: 'max_hp',
+    name: '+Max HP',
+    description: '+15 max HP',
+    rarity: 'common',
+    maxStacks: 5,
+    apply: (n) => ({ maxHpBonus: n * 15 }),
+  },
+  {
+    id: 'mp_regen',
+    name: '+MP Regen',
+    description: '+1 MP/s regen',
+    rarity: 'common',
+    maxStacks: 5,
+    apply: (n) => ({ mpRegenBonus: n * 1 }),
+  },
+  {
+    id: 'max_mp',
+    name: '+Max MP',
+    description: '+10 max MP',
+    rarity: 'common',
+    maxStacks: 5,
+    apply: (n) => ({ maxMpBonus: n * 10 }),
+  },
+  {
+    id: 'crit_damage',
+    name: '+Critical Damage',
+    description: '+20% critical damage multiplier',
+    rarity: 'common',
+    maxStacks: 5,
+    apply: (n) => ({ critDamageBonus: n * 0.20 }),
+  },
+  {
+    id: 'crit_chance',
+    name: '+Critical Hit Rate',
+    description: '+5% critical hit chance',
+    rarity: 'common',
+    maxStacks: 5,
+    apply: (n) => ({ critChanceBonus: n * 0.05 }),
+  },
+];
+
+// ============================================================
+// Shop Item Definitions
+// ============================================================
+export interface ShopItemDefinition {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  type: 'consumable' | 'weapon_upgrade';
+  effect: string;
+}
+
+export const SHOP_ITEMS: ShopItemDefinition[] = [
+  { id: 'potion', name: 'Potion', description: 'Restore 40 HP', cost: 30, type: 'consumable', effect: 'heal_40' },
+  { id: 'damage_potion', name: 'Damage Potion', description: '+20% damage for 60s', cost: 50, type: 'consumable', effect: 'damage_buff' },
+  { id: 'defense_potion', name: 'Defense Potion', description: '+5 armor for 60s', cost: 40, type: 'consumable', effect: 'defense_buff' },
+  { id: 'weapon_damage', name: 'Weapon Upgrade: Damage', description: '+5 base weapon damage', cost: 60, type: 'weapon_upgrade', effect: 'weapon_damage_5' },
+  { id: 'weapon_speed', name: 'Weapon Upgrade: Attack Speed', description: '+10% attack speed', cost: 55, type: 'weapon_upgrade', effect: 'weapon_speed_10' },
+  { id: 'weapon_range', name: 'Weapon Upgrade: Range', description: '+15% weapon range', cost: 50, type: 'weapon_upgrade', effect: 'weapon_range_15' },
+  { id: 'mana_potion', name: 'Mana Potion', description: 'Restore 30 MP', cost: 25, type: 'consumable', effect: 'mana_30' },
+];
+
+// ============================================================
+// Enemy Definitions
+// ============================================================
 export interface EnemyDefinition {
   id: string;
   name: string;
@@ -54,327 +256,108 @@ export interface EnemyDefinition {
   speed: number;
   color: number;
   size: number;
-  behavior: 'chase' | 'ranged' | 'burst' | 'circle' | 'boss';
+  behavior: 'grunt' | 'ranger' | 'charger' | 'boss';
   projectileColor?: number;
   xpValue: number;
+  goldValue: number;
 }
 
-export interface EquipmentDefinition {
-  id: string;
-  name: string;
-  slot: 'weapon' | 'armor' | 'ring' | 'pendant';
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  attackBonus: number;
-  hpBonus: number;
-  specialEffect?: string;
-  color: number;
-}
-
-// ============================================================
-// Heroes
-// ============================================================
-export const HEROES: HeroDefinition[] = [
-  {
-    id: 'archer',
-    name: 'Atreus',
-    description: 'A skilled archer with balanced stats',
-    baseHp: 100,
-    baseAttack: 10,
-    baseSpeed: 200,
-    attackSpeed: 600,
-    color: 0x4ecdc4,
-    unlockCost: 0,
-    specialAbility: '+10% Attack Speed',
-  },
-  {
-    id: 'ranger',
-    name: 'Sylvan',
-    description: 'Swift ranger with piercing arrows',
-    baseHp: 80,
-    baseAttack: 12,
-    baseSpeed: 240,
-    attackSpeed: 500,
-    color: 0x45b7d1,
-    unlockCost: 500,
-    specialAbility: 'Arrows pierce 1 enemy',
-  },
-  {
-    id: 'knight',
-    name: 'Cedric',
-    description: 'Tanky knight with high HP',
-    baseHp: 150,
-    baseAttack: 8,
-    baseSpeed: 160,
-    attackSpeed: 800,
-    color: 0xff6b6b,
-    unlockCost: 800,
-    specialAbility: '+30% Max HP',
-  },
-  {
-    id: 'mage',
-    name: 'Elara',
-    description: 'Powerful mage with area damage',
-    baseHp: 70,
-    baseAttack: 15,
-    baseSpeed: 180,
-    attackSpeed: 900,
-    color: 0xc44dff,
-    unlockCost: 1200,
-    specialAbility: 'Projectiles explode on hit',
-  },
-];
-
-// ============================================================
-// Abilities (Level-Up Choices)
-// ============================================================
-export const ABILITIES: AbilityDefinition[] = [
-  {
-    id: 'attack_boost',
-    name: 'Attack Boost',
-    description: 'Increase attack damage by {value}%',
-    icon: 'sword',
-    maxLevel: 5,
-    rarity: 'common',
-    apply: (level) => ({ attackBonus: level * 0.15 }),
-  },
-  {
-    id: 'speed_boost',
-    name: 'Swift Feet',
-    description: 'Increase movement speed by {value}%',
-    icon: 'boot',
-    maxLevel: 5,
-    rarity: 'common',
-    apply: (level) => ({ speedBonus: level * 0.1 }),
-  },
-  {
-    id: 'hp_boost',
-    name: 'Vitality',
-    description: 'Increase max HP by {value}%',
-    icon: 'heart',
-    maxLevel: 5,
-    rarity: 'common',
-    apply: (level) => ({ hpBonus: level * 0.15 }),
-  },
-  {
-    id: 'multishot',
-    name: 'Multishot',
-    description: 'Fire {value} additional arrows',
-    icon: 'arrows',
-    maxLevel: 3,
-    rarity: 'rare',
-    apply: (level) => ({ projectileCount: level, multishot: true }),
-  },
-  {
-    id: 'diagonal',
-    name: 'Diagonal Arrows',
-    description: 'Fire arrows diagonally',
-    icon: 'diagonal',
-    maxLevel: 1,
-    rarity: 'rare',
-    apply: () => ({ diagonalArrows: true }),
-  },
-  {
-    id: 'rear_arrow',
-    name: 'Rear Arrow',
-    description: 'Fire an arrow behind you',
-    icon: 'back',
-    maxLevel: 1,
-    rarity: 'rare',
-    apply: () => ({ rearArrow: true }),
-  },
-  {
-    id: 'piercing',
-    name: 'Piercing Shot',
-    description: 'Arrows pierce through enemies',
-    icon: 'pierce',
-    maxLevel: 1,
-    rarity: 'epic',
-    apply: () => ({ piercing: true }),
-  },
-  {
-    id: 'bouncing',
-    name: 'Ricochet',
-    description: 'Arrows bounce to nearby enemies',
-    icon: 'bounce',
-    maxLevel: 1,
-    rarity: 'epic',
-    apply: () => ({ bouncing: true }),
-  },
-  {
-    id: 'crit_chance',
-    name: 'Eagle Eye',
-    description: 'Increase crit chance by {value}%',
-    icon: 'eye',
-    maxLevel: 5,
-    rarity: 'rare',
-    apply: (level) => ({ critChance: level * 0.08 }),
-  },
-  {
-    id: 'crit_damage',
-    name: 'Deadly Strike',
-    description: 'Increase crit damage by {value}%',
-    icon: 'skull',
-    maxLevel: 3,
-    rarity: 'rare',
-    apply: (level) => ({ critDamage: level * 0.25 }),
-  },
-  {
-    id: 'life_steal',
-    name: 'Vampiric Arrows',
-    description: 'Heal {value}% of damage dealt',
-    icon: 'vampire',
-    maxLevel: 3,
-    rarity: 'epic',
-    apply: (level) => ({ lifeSteal: level * 0.05 }),
-  },
-  {
-    id: 'shield',
-    name: 'Arcane Shield',
-    description: 'Absorb {value} damage',
-    icon: 'shield',
-    maxLevel: 3,
-    rarity: 'epic',
-    apply: (level) => ({ shield: level * 15 }),
-  },
-  {
-    id: 'attack_speed',
-    name: 'Rapid Fire',
-    description: 'Increase attack speed by {value}%',
-    icon: 'fast',
-    maxLevel: 5,
-    rarity: 'common',
-    apply: (level) => ({ attackSpeedBonus: level * 0.12 }),
-  },
-  {
-    id: 'poison',
-    name: 'Poison Touch',
-    description: 'Arrows deal poison damage over time',
-    icon: 'poison',
-    maxLevel: 3,
-    rarity: 'rare',
-    apply: (level) => ({ poisonDamage: level * 3 }),
-  },
-  {
-    id: 'freeze',
-    name: 'Frost Arrows',
-    description: 'Chance to freeze enemies',
-    icon: 'ice',
-    maxLevel: 3,
-    rarity: 'rare',
-    apply: (level) => ({ freezeChance: level * 0.12 }),
-  },
-  {
-    id: 'orbitals',
-    name: 'Orbital Strike',
-    description: 'Orbiting projectiles deal damage',
-    icon: 'orbit',
-    maxLevel: 3,
-    rarity: 'legendary',
-    apply: (level) => ({ orbitalCount: level }),
-  },
-];
-
-// ============================================================
-// Enemies by Dungeon Chapter
-// ============================================================
 export const ENEMIES_BY_CHAPTER: EnemyDefinition[][] = [
   // Chapter 1: Forest
   [
-    { id: 'slime', name: 'Slime', hp: 20, attack: 5, speed: 60, color: 0x66bb6a, size: 18, behavior: 'chase', xpValue: 10 },
-    { id: 'bat', name: 'Bat', hp: 15, attack: 7, speed: 100, color: 0x8e24aa, size: 14, behavior: 'circle', xpValue: 12 },
-    { id: 'goblin', name: 'Goblin', hp: 30, attack: 8, speed: 70, color: 0x4caf50, size: 20, behavior: 'chase', xpValue: 15 },
-    { id: 'goblin_archer', name: 'Goblin Archer', hp: 20, attack: 10, speed: 50, color: 0x388e3c, size: 20, behavior: 'ranged', projectileColor: 0x8bc34a, xpValue: 18 },
+    { id: 'slime', name: 'Slime', hp: 30, attack: 6, speed: 55, color: 0x66bb6a, size: 18, behavior: 'grunt', xpValue: 10, goldValue: 3 },
+    { id: 'goblin', name: 'Goblin', hp: 40, attack: 8, speed: 65, color: 0x4caf50, size: 20, behavior: 'grunt', xpValue: 14, goldValue: 4 },
+    { id: 'goblin_archer', name: 'Goblin Archer', hp: 25, attack: 10, speed: 45, color: 0x388e3c, size: 20, behavior: 'ranger', projectileColor: 0x8bc34a, xpValue: 18, goldValue: 5 },
+    { id: 'wolf', name: 'Wolf', hp: 35, attack: 12, speed: 90, color: 0x8d6e63, size: 16, behavior: 'charger', xpValue: 16, goldValue: 4 },
   ],
   // Chapter 2: Cave
   [
-    { id: 'skeleton', name: 'Skeleton', hp: 35, attack: 10, speed: 65, color: 0xeeeeee, size: 20, behavior: 'chase', xpValue: 20 },
-    { id: 'ghost', name: 'Ghost', hp: 25, attack: 12, speed: 90, color: 0xb0bec5, size: 18, behavior: 'circle', xpValue: 22 },
-    { id: 'mummy', name: 'Mummy', hp: 50, attack: 8, speed: 40, color: 0xd7ccc8, size: 22, behavior: 'chase', xpValue: 25 },
-    { id: 'necromancer', name: 'Necromancer', hp: 30, attack: 15, speed: 45, color: 0x7b1fa2, size: 22, behavior: 'ranged', projectileColor: 0xce93d8, xpValue: 30 },
+    { id: 'skeleton', name: 'Skeleton', hp: 45, attack: 11, speed: 60, color: 0xeeeeee, size: 20, behavior: 'grunt', xpValue: 20, goldValue: 5 },
+    { id: 'ghost', name: 'Ghost', hp: 30, attack: 14, speed: 50, color: 0xb0bec5, size: 18, behavior: 'ranger', projectileColor: 0x80cbc4, xpValue: 24, goldValue: 6 },
+    { id: 'mummy', name: 'Mummy', hp: 60, attack: 9, speed: 40, color: 0xd7ccc8, size: 22, behavior: 'grunt', xpValue: 22, goldValue: 5 },
+    { id: 'bat_swarm', name: 'Bat Swarm', hp: 25, attack: 15, speed: 100, color: 0x7b1fa2, size: 14, behavior: 'charger', xpValue: 18, goldValue: 4 },
   ],
   // Chapter 3: Lava
   [
-    { id: 'fire_imp', name: 'Fire Imp', hp: 40, attack: 14, speed: 80, color: 0xff5722, size: 16, behavior: 'burst', xpValue: 30 },
-    { id: 'lava_golem', name: 'Lava Golem', hp: 80, attack: 12, speed: 35, color: 0xbf360c, size: 28, behavior: 'chase', xpValue: 35 },
-    { id: 'fire_mage', name: 'Fire Mage', hp: 35, attack: 18, speed: 50, color: 0xff9800, size: 20, behavior: 'ranged', projectileColor: 0xffeb3b, xpValue: 35 },
-    { id: 'phoenix', name: 'Phoenix', hp: 45, attack: 16, speed: 95, color: 0xffc107, size: 22, behavior: 'circle', xpValue: 40 },
+    { id: 'fire_imp', name: 'Fire Imp', hp: 50, attack: 16, speed: 70, color: 0xff5722, size: 16, behavior: 'ranger', projectileColor: 0xffeb3b, xpValue: 30, goldValue: 7 },
+    { id: 'lava_golem', name: 'Lava Golem', hp: 90, attack: 14, speed: 35, color: 0xbf360c, size: 28, behavior: 'grunt', xpValue: 35, goldValue: 8 },
+    { id: 'flame_hound', name: 'Flame Hound', hp: 40, attack: 20, speed: 110, color: 0xff9800, size: 18, behavior: 'charger', xpValue: 28, goldValue: 7 },
+    { id: 'fire_mage', name: 'Fire Mage', hp: 35, attack: 22, speed: 45, color: 0xffc107, size: 20, behavior: 'ranger', projectileColor: 0xff6f00, xpValue: 35, goldValue: 8 },
   ],
 ];
 
 export const BOSSES: EnemyDefinition[] = [
-  { id: 'treant', name: 'Ancient Treant', hp: 300, attack: 20, speed: 40, color: 0x2e7d32, size: 45, behavior: 'boss', xpValue: 200 },
-  { id: 'lich', name: 'Lich King', hp: 500, attack: 25, speed: 50, color: 0x4a148c, size: 40, behavior: 'boss', projectileColor: 0xba68c8, xpValue: 350 },
-  { id: 'dragon', name: 'Fire Dragon', hp: 800, attack: 35, speed: 55, color: 0xd50000, size: 50, behavior: 'boss', projectileColor: 0xff6f00, xpValue: 500 },
+  { id: 'treant', name: 'Ancient Treant', hp: 400, attack: 22, speed: 40, color: 0x2e7d32, size: 45, behavior: 'boss', xpValue: 200, goldValue: 50 },
+  { id: 'lich', name: 'Lich King', hp: 600, attack: 28, speed: 50, color: 0x4a148c, size: 40, behavior: 'boss', projectileColor: 0xba68c8, xpValue: 350, goldValue: 80 },
+  { id: 'dragon', name: 'Fire Dragon', hp: 900, attack: 38, speed: 55, color: 0xd50000, size: 50, behavior: 'boss', projectileColor: 0xff6f00, xpValue: 500, goldValue: 120 },
 ];
 
 // ============================================================
-// Equipment
+// Progression Config
 // ============================================================
-export const EQUIPMENT: EquipmentDefinition[] = [
-  { id: 'wooden_bow', name: 'Wooden Bow', slot: 'weapon', rarity: 'common', attackBonus: 5, hpBonus: 0, color: 0x8d6e63 },
-  { id: 'iron_bow', name: 'Iron Bow', slot: 'weapon', rarity: 'rare', attackBonus: 12, hpBonus: 0, color: 0x78909c },
-  { id: 'golden_bow', name: 'Golden Bow', slot: 'weapon', rarity: 'epic', attackBonus: 20, hpBonus: 0, specialEffect: '+15% Crit Chance', color: 0xffd54f },
-  { id: 'dragon_bow', name: 'Dragon Bow', slot: 'weapon', rarity: 'legendary', attackBonus: 35, hpBonus: 0, specialEffect: 'Fire damage', color: 0xff5722 },
-  { id: 'leather_armor', name: 'Leather Armor', slot: 'armor', rarity: 'common', attackBonus: 0, hpBonus: 20, color: 0x8d6e63 },
-  { id: 'chain_mail', name: 'Chain Mail', slot: 'armor', rarity: 'rare', attackBonus: 0, hpBonus: 40, color: 0x78909c },
-  { id: 'plate_armor', name: 'Plate Armor', slot: 'armor', rarity: 'epic', attackBonus: 0, hpBonus: 70, specialEffect: '+10% Damage Reduction', color: 0xffd54f },
-  { id: 'dragon_scale', name: 'Dragon Scale', slot: 'armor', rarity: 'legendary', attackBonus: 10, hpBonus: 100, specialEffect: 'Fire resistance', color: 0xff5722 },
-  { id: 'copper_ring', name: 'Copper Ring', slot: 'ring', rarity: 'common', attackBonus: 3, hpBonus: 5, color: 0xbf8040 },
-  { id: 'silver_ring', name: 'Silver Ring', slot: 'ring', rarity: 'rare', attackBonus: 6, hpBonus: 10, color: 0xc0c0c0 },
-  { id: 'gold_ring', name: 'Gold Ring', slot: 'ring', rarity: 'epic', attackBonus: 10, hpBonus: 15, specialEffect: '+5% Life Steal', color: 0xffd700 },
-  { id: 'emerald_pendant', name: 'Emerald Pendant', slot: 'pendant', rarity: 'rare', attackBonus: 4, hpBonus: 15, color: 0x4caf50 },
-  { id: 'ruby_pendant', name: 'Ruby Pendant', slot: 'pendant', rarity: 'epic', attackBonus: 8, hpBonus: 20, specialEffect: '+10% Attack Speed', color: 0xf44336 },
-  { id: 'diamond_pendant', name: 'Diamond Pendant', slot: 'pendant', rarity: 'legendary', attackBonus: 15, hpBonus: 30, specialEffect: 'Revive once per run', color: 0x81d4fa },
-];
-
-// ============================================================
-// Room/Chapter Configuration
-// ============================================================
-export const ROOMS_PER_CHAPTER = 10;
-export const BOSS_ROOM_INTERVAL = 5; // Boss every 5 rooms
-export const WAVES_PER_ROOM = 3;
-export const XP_PER_LEVEL = 50; // XP needed to level up (scales)
+export const WAVES_PER_STAGE = 30;
+export const BOSS_WAVE_INTERVAL = 3; // boss every 3rd wave
+export const XP_PER_LEVEL = 50;
 
 export function getXpForLevel(level: number): number {
   return Math.floor(XP_PER_LEVEL * (1 + (level - 1) * 0.3));
 }
 
-export function getEnemyCountForWave(room: number, wave: number): number {
-  return Math.min(3 + Math.floor(room / 2) + wave, 12);
+export function getEnemyCountForWave(wave: number, stage: number): number {
+  return Math.min(3 + Math.floor(wave / 3) + stage, 10);
 }
 
-export function scaleEnemyStat(baseStat: number, chapter: number, room: number): number {
-  const scale = 1 + (chapter * 0.5) + (room * 0.05);
-  return Math.floor(baseStat * scale);
+export function scaleEnemyStat(baseStat: number, stage: number, wave: number): number {
+  return Math.floor(baseStat * (1 + stage * 0.5 + wave * 0.02));
 }
+
+// ============================================================
+// Player Base Stats
+// ============================================================
+export const BASE_PLAYER_STATS = {
+  maxHp: 100,
+  maxMp: 80,
+  hpRegen: 0.5,  // per second
+  mpRegen: 2,    // per second
+  armor: 0,
+  lifesteal: 0,
+  critChance: 0.05,
+  critDamage: 1.5,
+  damageMult: 1,
+  attackSpeedMult: 1,
+  moveSpeedMult: 1,
+  rangeMult: 1,
+  projectileBonus: 0,
+  baseSpeed: 180,
+};
 
 // ============================================================
 // Save Data Structure
 // ============================================================
 export interface SaveData {
-  gold: number;
-  gems: number;
-  highestChapter: number;
-  highestRoom: number;
-  unlockedHeroes: string[];
-  selectedHero: string;
-  equippedItems: Record<string, string>;
-  ownedItems: string[];
-  totalRuns: number;
-  totalKills: number;
+  goldBank: number;
+  essence: number;
+  heroLevel: number;
+  heroXp: number;
+  bestStage: number;
+  stageCheckpoint: number;
+  settings: {
+    screenShake: boolean;
+    volume: number;
+  };
 }
 
 export function getDefaultSaveData(): SaveData {
   return {
-    gold: 0,
-    gems: 0,
-    highestChapter: 0,
-    highestRoom: 0,
-    unlockedHeroes: ['archer'],
-    selectedHero: 'archer',
-    equippedItems: {},
-    ownedItems: ['wooden_bow', 'leather_armor'],
-    totalRuns: 0,
-    totalKills: 0,
+    goldBank: 0,
+    essence: 0,
+    heroLevel: 1,
+    heroXp: 0,
+    bestStage: 1,
+    stageCheckpoint: 1,
+    settings: {
+      screenShake: true,
+      volume: 0.7,
+    },
   };
 }

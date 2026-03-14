@@ -1,4 +1,5 @@
 import { AssetGenerator } from '../utils/AssetGenerator';
+import { GAME_WIDTH, GAME_HEIGHT } from '../data/GameData';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -6,17 +7,14 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Generate all procedural textures
     AssetGenerator.generate(this);
 
-    // Loading text
-    const text = this.add.text(195, 400, 'Loading...', {
+    const text = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Loading...', {
       fontSize: '24px',
       color: '#ffffff',
       fontFamily: 'Arial',
     }).setOrigin(0.5);
 
-    // Animate loading
     this.tweens.add({
       targets: text,
       alpha: { from: 1, to: 0.3 },

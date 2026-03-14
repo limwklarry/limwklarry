@@ -1,7 +1,10 @@
+import { GAME_WIDTH, GAME_HEIGHT } from '../data/GameData';
+
 interface GameOverData {
-  chapter: number;
-  room: number;
+  stage: number;
+  wave: number;
   gold: number;
+  essence: number;
   kills: number;
   level: number;
 }
@@ -12,18 +15,16 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   create(data: GameOverData): void {
-    const { width, height } = this.scale;
-
     // Background
     const bg = this.add.graphics();
     bg.fillGradientStyle(0x1a1a2e, 0x1a1a2e, 0x0f3460, 0x0f3460, 1);
-    bg.fillRect(0, 0, width, height);
+    bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    // Death effect particles
+    // Death particles
     for (let i = 0; i < 15; i++) {
       const p = this.add.circle(
-        width / 2 + Phaser.Math.Between(-100, 100),
-        height / 2 + Phaser.Math.Between(-100, 100),
+        GAME_WIDTH / 2 + Phaser.Math.Between(-150, 150),
+        GAME_HEIGHT / 2 + Phaser.Math.Between(-100, 100),
         Phaser.Math.Between(2, 5),
         0xff4444,
         Phaser.Math.FloatBetween(0.3, 0.8),
@@ -38,7 +39,7 @@ export class GameOverScene extends Phaser.Scene {
     }
 
     // Title
-    this.add.text(width / 2, 120, 'DEFEATED', {
+    this.add.text(GAME_WIDTH / 2, 100, 'DEFEATED', {
       fontSize: '42px',
       color: '#ff4444',
       fontFamily: 'Arial',
@@ -47,50 +48,43 @@ export class GameOverScene extends Phaser.Scene {
       strokeThickness: 6,
     }).setOrigin(0.5);
 
-    // Stats container
-    const statsY = 220;
-    const statSpacing = 50;
+    // Stats
+    const statsY = 180;
+    const sp = 45;
+    this.createStatRow(GAME_WIDTH / 2, statsY, 'Stage', `${data.stage}`);
+    this.createStatRow(GAME_WIDTH / 2, statsY + sp, 'Wave', `${data.wave}`);
+    this.createStatRow(GAME_WIDTH / 2, statsY + sp * 2, 'Level', `${data.level}`);
+    this.createStatRow(GAME_WIDTH / 2, statsY + sp * 3, 'Kills', `${data.kills}`);
 
-    this.createStatRow(width / 2, statsY, 'Chapter', `${data.chapter + 1}`);
-    this.createStatRow(width / 2, statsY + statSpacing, 'Room', `${data.room + 1}`);
-    this.createStatRow(width / 2, statsY + statSpacing * 2, 'Level', `${data.level}`);
-    this.createStatRow(width / 2, statsY + statSpacing * 3, 'Kills', `${data.kills}`);
-
-    // Gold earned (highlighted)
-    this.add.image(width / 2 - 60, statsY + statSpacing * 4 + 5, 'coin').setScale(2);
-    this.add.text(width / 2 - 40, statsY + statSpacing * 4, `+${data.gold} Gold`, {
-      fontSize: '24px',
+    // Gold earned
+    this.add.text(GAME_WIDTH / 2, statsY + sp * 4 + 10, `+${data.gold} Gold  +${data.essence} Essence`, {
+      fontSize: '20px',
       color: '#ffd700',
       fontFamily: 'Arial',
       fontStyle: 'bold',
-    }).setOrigin(0, 0.5);
+    }).setOrigin(0.5);
 
     // Buttons
-    const btnY = 580;
-
-    // Retry button
-    this.createButton(width / 2, btnY, 200, 55, 'RETRY', 0x4ecdc4, () => {
+    this.createButton(GAME_WIDTH / 2, 480, 200, 55, 'RETRY (R)', 0x4ecdc4, () => {
       this.scene.start('GameScene');
     });
 
-    // Menu button
-    this.createButton(width / 2, btnY + 75, 200, 50, 'MENU', 0x455a64, () => {
+    this.createButton(GAME_WIDTH / 2, 550, 200, 50, 'MENU', 0x455a64, () => {
       this.scene.start('MenuScene');
+    });
+
+    // Listen for R key
+    this.input.keyboard?.on('keydown-R', () => {
+      this.scene.start('GameScene');
     });
   }
 
   private createStatRow(x: number, y: number, label: string, value: string): void {
     this.add.text(x - 80, y, label, {
-      fontSize: '18px',
-      color: '#aaaaaa',
-      fontFamily: 'Arial',
+      fontSize: '18px', color: '#aaaaaa', fontFamily: 'Arial',
     }).setOrigin(0, 0.5);
-
     this.add.text(x + 80, y, value, {
-      fontSize: '22px',
-      color: '#ffffff',
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
+      fontSize: '22px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(1, 0.5);
   }
 
@@ -103,10 +97,7 @@ export class GameOverScene extends Phaser.Scene {
     bg.fillRoundedRect(x - w / 2, y - h / 2, w, h, 12);
 
     this.add.text(x, y, label, {
-      fontSize: '22px',
-      color: '#ffffff',
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
+      fontSize: '20px', color: '#ffffff', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(0.5);
 
     this.add.rectangle(x, y, w, h, 0xffffff, 0)
