@@ -205,9 +205,9 @@ export class GameScene extends Phaser.Scene {
     // Player update (regen, buffs)
     this.player.update(delta, time);
 
-    // Combat (left click to attack)
+    // Combat (auto-attack nearest enemy constantly)
     const activeEnemies = this.enemies.filter(e => e.sprite.active);
-    this.combat.update(time, activeEnemies, this.input_sys.aimAngle, this.input_sys.leftDown);
+    this.combat.update(time, activeEnemies, this.input_sys.aimAngle);
 
     // Right click: special skill
     if (this.input_sys.consumeRightClick()) {

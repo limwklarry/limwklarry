@@ -167,32 +167,33 @@ export class LoadoutOverlay {
     }).setOrigin(0.5);
     this.container.add(wLabel);
 
+    const cardSpacing = 280;
     WEAPONS.forEach((w, i) => {
-      this.createWeaponCard(w, 80 + (i - 1) * 260 + GAME_WIDTH / 2, 160);
+      this.createWeaponCard(w, (i - 1) * cardSpacing + GAME_WIDTH / 2, 150);
     });
 
     // Skill section
-    const sLabel = scene.add.text(GAME_WIDTH / 2, 280, 'Select Special Skill', {
+    const sLabel = scene.add.text(GAME_WIDTH / 2, 260, 'Select Special Skill', {
       fontSize: '18px', color: '#ffffff', fontFamily: 'Arial',
     }).setOrigin(0.5);
     this.container.add(sLabel);
 
     SKILLS.forEach((s, i) => {
-      this.createSkillCard(s, 80 + (i - 1) * 260 + GAME_WIDTH / 2, 370);
+      this.createSkillCard(s, (i - 1) * cardSpacing + GAME_WIDTH / 2, 350);
     });
 
     // Start button (disabled initially)
     this.startBg = scene.add.graphics();
     this.startBg.fillStyle(0x455a64, 0.5);
-    this.startBg.fillRoundedRect(GAME_WIDTH / 2 - 80, 500, 160, 50, 10);
+    this.startBg.fillRoundedRect(GAME_WIDTH / 2 - 80, 470, 160, 50, 10);
     this.container.add(this.startBg);
 
-    this.startBtn = scene.add.text(GAME_WIDTH / 2, 525, 'START', {
+    this.startBtn = scene.add.text(GAME_WIDTH / 2, 495, 'START', {
       fontSize: '22px', color: '#666666', fontFamily: 'Arial', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.container.add(this.startBtn);
 
-    const startHit = scene.add.rectangle(GAME_WIDTH / 2, 525, 160, 50, 0xffffff, 0)
+    const startHit = scene.add.rectangle(GAME_WIDTH / 2, 495, 160, 50, 0xffffff, 0)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         if (this.selectedWeapon && this.selectedSkill) {
@@ -303,7 +304,7 @@ export class LoadoutOverlay {
     const canStart = this.selectedWeapon && this.selectedSkill;
     this.startBg.clear();
     this.startBg.fillStyle(canStart ? 0x4ecdc4 : 0x455a64, canStart ? 1 : 0.5);
-    this.startBg.fillRoundedRect(GAME_WIDTH / 2 - 80, 500, 160, 50, 10);
+    this.startBg.fillRoundedRect(GAME_WIDTH / 2 - 80, 470, 160, 50, 10);
     this.startBtn.setColor(canStart ? '#ffffff' : '#666666');
   }
 }

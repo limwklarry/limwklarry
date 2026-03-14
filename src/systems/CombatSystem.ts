@@ -24,10 +24,15 @@ export class CombatSystem {
     });
   }
 
-  update(time: number, enemies: Enemy[], aimAngle: number, leftDown: boolean): void {
-    // Attack on left-click hold
-    if (leftDown && time - this.lastAttackTime >= this.player.getEffectiveAttackSpeed()) {
-      this.attack(aimAngle, enemies);
+  update(time: number, enemies: Enemy[], aimAngle: number): void {
+    // Auto-attack constantly when enemies exist
+    if (enemies.length > 0 && time - this.lastAttackTime >= this.player.getEffectiveAttackSpeed()) {
+      // Aim at nearest enemy for auto-attack
+      const nearest = this.findNearestEnemy(enemies);
+      const attackAngle = nearest
+        ? Math.atan2(nearest.sprite.y - this.player.sprite.y, nearest.sprite.x - this.player.sprite.x)
+        : aimAngle;
+      this.attack(attackAngle, enemies);
       this.lastAttackTime = time;
     }
 
@@ -191,6 +196,23 @@ export class CombatSystem {
     if (killed) {
       (this.scene as any).onEnemyKilled?.(enemy);
     }
+  }
+
+  private findNearestEnemy(enemies: Enemy[]): Enemy | null {
+    let nearest: Enemy | null = null;
+    let minDist = Infinity;
+    for (const enemy of enemies) {
+      if (!enemy.sprite.active) continue;
+      const dist = Phaser.Math.Distance.Between(
+        this.player.sprite.x, this.player.sprite.y,
+        enemy.sprite.x, enemy.sprite.y,
+      );
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = enemy;
+      }
+    }
+    return nearest;
   }
 
   // ============================================================
