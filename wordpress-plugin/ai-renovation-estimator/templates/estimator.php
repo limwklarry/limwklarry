@@ -1,0 +1,464 @@
+<?php
+/**
+ * Renovation Estimator Template
+ * Rendered by the [renovation_estimator] shortcode
+ */
+if (!defined('ABSPATH')) {
+    exit;
+}
+?>
+<div class="estimator-container">
+  <!-- Progress Bar -->
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill"></div>
+    <div class="progress-steps">
+      <span class="step-dot active" data-step="1">1</span>
+      <span class="step-dot" data-step="2">2</span>
+      <span class="step-dot" data-step="3">3</span>
+      <span class="step-dot" data-step="4">4</span>
+      <span class="step-dot" data-step="5">5</span>
+      <span class="step-dot" data-step="6">6</span>
+    </div>
+  </div>
+
+  <!-- Step 1: Property Type -->
+  <section class="step active" id="step1">
+    <h2>What type of property are you renovating?</h2>
+    <p class="step-subtitle">Select your property type to get started</p>
+    <div class="property-grid">
+      <button class="property-btn" data-value="BTO/SBF">
+        <div class="property-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="12" y="20" width="40" height="36" rx="2" stroke="currentColor" stroke-width="2.5"/>
+            <path d="M32 8L8 24h48L32 8z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>
+            <rect x="24" y="36" width="16" height="20" rx="1" stroke="currentColor" stroke-width="2"/>
+            <rect x="18" y="26" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="38" y="26" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="37" cy="46" r="1.5" fill="currentColor"/>
+            <text x="32" y="62" text-anchor="middle" font-size="5" fill="currentColor" font-weight="bold">NEW</text>
+          </svg>
+        </div>
+        <span>BTO / SBF</span>
+      </button>
+      <button class="property-btn" data-value=">20 years old Resale HDB">
+        <div class="property-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="14" y="16" width="36" height="40" rx="2" stroke="currentColor" stroke-width="2.5"/>
+            <rect x="20" y="22" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="36" y="22" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="20" y="34" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="36" y="34" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="26" y="46" width="12" height="10" rx="1" stroke="currentColor" stroke-width="2"/>
+            <circle cx="35" cy="51" r="1.5" fill="currentColor"/>
+            <path d="M18 14c0-1 1-4 4-4M46 14c0-1-1-4-4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+          </svg>
+        </div>
+        <span>&gt;20 Yrs Resale HDB</span>
+      </button>
+      <button class="property-btn" data-value="MOP Resale HDB">
+        <div class="property-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="14" y="18" width="36" height="38" rx="2" stroke="currentColor" stroke-width="2.5"/>
+            <rect x="20" y="24" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="36" y="24" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="20" y="36" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="36" y="36" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="26" y="46" width="12" height="10" rx="1" stroke="currentColor" stroke-width="2"/>
+            <circle cx="35" cy="51" r="1.5" fill="currentColor"/>
+            <path d="M22 12h20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span>MOP Resale HDB</span>
+      </button>
+      <button class="property-btn" data-value="Condominium">
+        <div class="property-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="12" width="20" height="44" rx="2" stroke="currentColor" stroke-width="2.5"/>
+            <rect x="36" y="22" width="20" height="34" rx="2" stroke="currentColor" stroke-width="2.5"/>
+            <rect x="13" y="18" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="13" y="28" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="13" y="38" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="41" y="28" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="41" y="38" width="6" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="14" y="48" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="42" y="48" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M0 56h64" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </div>
+        <span>Condominium</span>
+      </button>
+      <button class="property-btn" data-value="Landed">
+        <div class="property-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="28" width="44" height="28" rx="2" stroke="currentColor" stroke-width="2.5"/>
+            <path d="M6 30L32 10l26 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="26" y="40" width="12" height="16" rx="1" stroke="currentColor" stroke-width="2"/>
+            <circle cx="35" cy="48" r="1.5" fill="currentColor"/>
+            <rect x="14" y="34" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="42" y="34" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="40" y="14" width="8" height="14" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M4 56h56" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </div>
+        <span>Landed</span>
+      </button>
+      <button class="property-btn" data-value="Commercial">
+        <div class="property-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="10" width="48" height="46" rx="2" stroke="currentColor" stroke-width="2.5"/>
+            <rect x="14" y="16" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="27" y="16" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="40" y="16" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="14" y="28" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="27" y="28" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="40" y="28" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="14" y="44" width="36" height="12" rx="1" stroke="currentColor" stroke-width="2"/>
+            <path d="M24 44v12M40 44v12" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <span>Commercial</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Step 2: Scope of Works -->
+  <section class="step" id="step2">
+    <h2>Select your scope of works</h2>
+    <p class="step-subtitle">Choose all that apply to your renovation</p>
+
+    <div class="scope-categories">
+      <div class="scope-category">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          Hacking &amp; Dismantling
+        </h3>
+        <div class="scope-options">
+          <label class="scope-item"><input type="checkbox" name="scope" value="hack_whole_house" data-cost="5000"><span class="checkmark"></span><span class="scope-label">Hack whole house flooring and wall tiles</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="hack_kitchen_bath" data-cost="3000"><span class="checkmark"></span><span class="scope-label">Hack kitchen and bathrooms only</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="dismantle_1_3_cabinets" data-cost="800"><span class="checkmark"></span><span class="scope-label">Dismantle 1-3 sets of cabinets</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="dismantle_4_8_cabinets" data-cost="1800"><span class="checkmark"></span><span class="scope-label">Dismantle 4-8 sets of cabinets</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="demolish_1_5ft_wall" data-cost="1200"><span class="checkmark"></span><span class="scope-label">Demolish 1FT-5FT of wall</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="demolish_6_10ft_wall" data-cost="2200"><span class="checkmark"></span><span class="scope-label">Demolish 6FT-10FT of wall</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="demolish_11_15ft_wall" data-cost="3200"><span class="checkmark"></span><span class="scope-label">Demolish 11FT-15FT of wall</span></label>
+        </div>
+      </div>
+
+      <div class="scope-category">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 6V2M6 6V4M18 6V4"/></svg>
+          Carpentry
+        </h3>
+        <div class="scope-options">
+          <label class="scope-item"><input type="checkbox" name="scope" value="kitchen_20_30ft" data-cost="8000"><span class="checkmark"></span><span class="scope-label">20FT-30FT of kitchen cabinet</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="kitchen_31_40ft" data-cost="12000"><span class="checkmark"></span><span class="scope-label">31FT-40FT of kitchen cabinet</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="wardrobe_1_2" data-cost="5000"><span class="checkmark"></span><span class="scope-label">1-2 sets of full-height wardrobe</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="wardrobe_3_4" data-cost="9000"><span class="checkmark"></span><span class="scope-label">3-4 sets of full-height wardrobe</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="other_cabinet_1_2" data-cost="3500"><span class="checkmark"></span><span class="scope-label">1-2 sets of other cabinetry</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="other_cabinet_3_4" data-cost="6500"><span class="checkmark"></span><span class="scope-label">3-4 sets of other cabinetry</span></label>
+        </div>
+      </div>
+
+      <div class="scope-category">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Electrical
+        </h3>
+        <div class="scope-options">
+          <label class="scope-item"><input type="checkbox" name="scope" value="minor_electrical" data-cost="2500"><span class="checkmark"></span><span class="scope-label">Minor electrical works</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="rewiring" data-cost="6000"><span class="checkmark"></span><span class="scope-label">Rewiring needed</span></label>
+        </div>
+      </div>
+
+      <div class="scope-category">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 12h12M6 12a6 6 0 0 1 0-12h12a6 6 0 0 1 0 12M6 12a6 6 0 0 0 0 12h12a6 6 0 0 0 0-12"/></svg>
+          Plumbing
+        </h3>
+        <div class="scope-options">
+          <label class="scope-item"><input type="checkbox" name="scope" value="minor_plumbing" data-cost="1500"><span class="checkmark"></span><span class="scope-label">Minor plumbing works</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="relay_pipes" data-cost="4500"><span class="checkmark"></span><span class="scope-label">Re-lay whole house water pipes</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="relocate_discharge" data-cost="2500"><span class="checkmark"></span><span class="scope-label">Relocate discharge pipes</span></label>
+        </div>
+      </div>
+
+      <div class="scope-category">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V2M2 12h20"/><circle cx="12" cy="12" r="10"/></svg>
+          Other Works
+        </h3>
+        <div class="scope-options">
+          <label class="scope-item"><input type="checkbox" name="scope" value="painting" data-cost="2800"><span class="checkmark"></span><span class="scope-label">Painting</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="haulage" data-cost="1500"><span class="checkmark"></span><span class="scope-label">Haulage &amp; disposal of debris</span></label>
+          <label class="scope-item"><input type="checkbox" name="scope" value="cleaning" data-cost="500"><span class="checkmark"></span><span class="scope-label">General cleaning</span></label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 3: Design Style -->
+  <section class="step" id="step3">
+    <h2>Choose your preferred design styles</h2>
+    <p class="step-subtitle">Select up to 3 styles that inspire you</p>
+    <div class="style-counter">Selected: <span id="styleCount">0</span> / 3</div>
+    <div class="style-grid">
+      <button class="style-btn" data-value="Scandinavian">
+        <div class="style-image" style="background: linear-gradient(135deg, #f5f0e8 0%, #e8dfd0 40%, #d4c5a9 100%);">
+          <div class="style-preview">
+            <div class="sp-wall" style="background:#f5f0e8;"></div>
+            <div class="sp-floor" style="background:#d4b896;"></div>
+            <div class="sp-furniture sp-sofa" style="background:#e8dfd0; left:15%; bottom:30%; width:35%; height:18%; border-radius:8px 8px 4px 4px;"></div>
+            <div class="sp-furniture" style="background:#c4a97d; left:55%; bottom:30%; width:12%; height:28%; border-radius:4px;"></div>
+            <div class="sp-furniture" style="background:#8fbc8f; left:72%; bottom:30%; width:18%; height:14%; border-radius:50% 50% 4px 4px;"></div>
+            <div class="sp-accent" style="background:#87ceeb; left:20%; top:15%; width:25%; height:20%; border-radius:2px;"></div>
+          </div>
+        </div>
+        <span class="style-name">Scandinavian</span>
+      </button>
+      <button class="style-btn" data-value="Muji">
+        <div class="style-image" style="background: linear-gradient(135deg, #faf6f0 0%, #e8ddd0 40%, #c9b99a 100%);">
+          <div class="style-preview">
+            <div class="sp-wall" style="background:#faf6f0;"></div>
+            <div class="sp-floor" style="background:#c9b99a;"></div>
+            <div class="sp-furniture" style="background:#d4c4a8; left:10%; bottom:30%; width:30%; height:15%; border-radius:2px;"></div>
+            <div class="sp-furniture" style="background:#b8a88c; left:45%; bottom:30%; width:20%; height:35%; border-radius:2px;"></div>
+            <div class="sp-furniture" style="background:#e8ddd0; left:70%; bottom:30%; width:20%; height:20%; border-radius:2px;"></div>
+          </div>
+        </div>
+        <span class="style-name">Muji</span>
+      </button>
+      <button class="style-btn" data-value="Wabi Sabi">
+        <div class="style-image" style="background: linear-gradient(135deg, #e8e0d4 0%, #c4b5a0 40%, #9e8e78 100%);">
+          <div class="style-preview">
+            <div class="sp-wall" style="background:#e8e0d4;"></div>
+            <div class="sp-floor" style="background:#9e8e78;"></div>
+            <div class="sp-furniture" style="background:#b8a890; left:20%; bottom:30%; width:25%; height:22%; border-radius:12px;"></div>
+            <div class="sp-furniture" style="background:#8b7d6b; left:50%; bottom:30%; width:8%; height:30%; border-radius:50% 50% 2px 2px;"></div>
+            <div class="sp-furniture" style="background:#c4b5a0; left:65%; bottom:30%; width:22%; height:12%; border-radius:6px;"></div>
+            <div class="sp-accent" style="background:#6b5b4a; left:52%; bottom:32%; width:4%; height:5%; border-radius:50%;"></div>
+          </div>
+        </div>
+        <span class="style-name">Wabi Sabi</span>
+      </button>
+      <button class="style-btn" data-value="Modern Lux">
+        <div class="style-image" style="background: linear-gradient(135deg, #2c2c2c 0%, #1a1a2e 40%, #0f0f1a 100%);">
+          <div class="style-preview">
+            <div class="sp-wall" style="background:#1a1a2e;"></div>
+            <div class="sp-floor" style="background:#2c2c2c;"></div>
+            <div class="sp-furniture" style="background:#c9a96e; left:15%; bottom:30%; width:35%; height:16%; border-radius:2px;"></div>
+            <div class="sp-furniture" style="background:#3a3a4a; left:55%; bottom:30%; width:15%; height:32%; border-radius:2px;"></div>
+            <div class="sp-accent" style="background:#c9a96e; left:20%; top:12%; width:30%; height:2px;"></div>
+            <div class="sp-accent" style="background:#e8d5a8; left:75%; bottom:30%; width:15%; height:10%; border-radius:50%;"></div>
+          </div>
+        </div>
+        <span class="style-name">Modern Lux</span>
+      </button>
+      <button class="style-btn" data-value="Minimalist">
+        <div class="style-image" style="background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 40%, #e0e0e0 100%);">
+          <div class="style-preview">
+            <div class="sp-wall" style="background:#fafafa;"></div>
+            <div class="sp-floor" style="background:#e8e8e8;"></div>
+            <div class="sp-furniture" style="background:#d0d0d0; left:25%; bottom:30%; width:30%; height:14%; border-radius:2px;"></div>
+            <div class="sp-furniture" style="background:#c0c0c0; left:60%; bottom:30%; width:10%; height:24%; border-radius:2px;"></div>
+          </div>
+        </div>
+        <span class="style-name">Minimalist</span>
+      </button>
+      <button class="style-btn" data-value="Contemporary">
+        <div class="style-image" style="background: linear-gradient(135deg, #f5f5f0 0%, #d4d0c8 40%, #8c8878 100%);">
+          <div class="style-preview">
+            <div class="sp-wall" style="background:#f0ede6;"></div>
+            <div class="sp-floor" style="background:#8c8878;"></div>
+            <div class="sp-furniture" style="background:#4a6741; left:10%; bottom:30%; width:30%; height:18%; border-radius:4px;"></div>
+            <div class="sp-furniture" style="background:#2c3e50; left:45%; bottom:30%; width:18%; height:30%; border-radius:2px;"></div>
+            <div class="sp-accent" style="background:#e67e22; left:68%; bottom:30%; width:20%; height:12%; border-radius:50% 50% 4px 4px;"></div>
+          </div>
+        </div>
+        <span class="style-name">Contemporary</span>
+      </button>
+      <button class="style-btn" data-value="Elegant">
+        <div class="style-image" style="background: linear-gradient(135deg, #f0e6d3 0%, #d4c4a8 40%, #8b7355 100%);">
+          <div class="style-preview">
+            <div class="sp-wall" style="background:#f0e6d3;"></div>
+            <div class="sp-floor" style="background:#8b7355;"></div>
+            <div class="sp-furniture" style="background:#c9a96e; left:15%; bottom:30%; width:32%; height:20%; border-radius:6px 6px 2px 2px;"></div>
+            <div class="sp-furniture" style="background:#6b4226; left:52%; bottom:30%; width:14%; height:34%; border-radius:4px;"></div>
+            <div class="sp-accent" style="background:#c9a96e; left:15%; top:10%; width:28%; height:22%; border-radius:50%;border:2px solid #b8963e;"></div>
+            <div class="sp-accent" style="background:#f0e6d3; left:70%; bottom:30%; width:18%; height:15%; border-radius:2px;border:1px solid #c9a96e;"></div>
+          </div>
+        </div>
+        <span class="style-name">Elegant</span>
+      </button>
+      <button class="style-btn" data-value="Industrial">
+        <div class="style-image" style="background: linear-gradient(135deg, #4a4a4a 0%, #333333 40%, #1a1a1a 100%);">
+          <div class="style-preview">
+            <div class="sp-wall" style="background:#5a5a5a;"></div>
+            <div class="sp-floor" style="background:#3a3a3a;"></div>
+            <div class="sp-furniture" style="background:#8b4513; left:15%; bottom:30%; width:30%; height:16%; border-radius:0;"></div>
+            <div class="sp-furniture" style="background:#696969; left:50%; bottom:30%; width:15%; height:28%; border-radius:0;"></div>
+            <div class="sp-accent" style="background:#ff8c00; left:25%; top:15%; width:6%; height:10%; border-radius:50%;"></div>
+            <div class="sp-accent" style="background:#696969; left:70%; bottom:32%; width:18%; height:2px;"></div>
+            <div class="sp-accent" style="background:#696969; left:78%; bottom:34%; width:2%; height:20%;"></div>
+          </div>
+        </div>
+        <span class="style-name">Industrial</span>
+      </button>
+      <button class="style-btn" data-value="Japandi">
+        <div class="style-image" style="background: linear-gradient(135deg, #f5efe6 0%, #d9ccb9 40%, #a69279 100%);">
+          <div class="style-preview">
+            <div class="sp-wall" style="background:#f5efe6;"></div>
+            <div class="sp-floor" style="background:#bfae93;"></div>
+            <div class="sp-furniture" style="background:#2c2c2c; left:20%; bottom:30%; width:28%; height:12%; border-radius:2px;"></div>
+            <div class="sp-furniture" style="background:#c4a97d; left:52%; bottom:30%; width:12%; height:26%; border-radius:2px;"></div>
+            <div class="sp-furniture" style="background:#8fbc8f; left:68%; bottom:30%; width:6%; height:18%; border-radius:50% 50% 2px 2px;"></div>
+            <div class="sp-accent" style="background:#2c2c2c; left:25%; top:15%; width:18%; height:1px;"></div>
+          </div>
+        </div>
+        <span class="style-name">Japandi</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Step 4: Floor Plan Upload -->
+  <section class="step" id="step4">
+    <h2>Upload your floor plan</h2>
+    <p class="step-subtitle">This helps us provide a more accurate estimate (optional)</p>
+    <div class="upload-area" id="uploadArea">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p class="upload-text">Drag &amp; drop your floor plan here</p>
+      <p class="upload-subtext">or click to browse (JPG, PNG, PDF - max 10MB)</p>
+      <input type="file" id="floorPlanInput" accept=".jpg,.jpeg,.png,.pdf" hidden>
+    </div>
+    <div class="upload-preview" id="uploadPreview" style="display:none;">
+      <div class="preview-content">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <span id="fileName"></span>
+        <button class="remove-file" id="removeFile">&times;</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 5: Contact Info -->
+  <section class="step" id="step5">
+    <h2>Almost there! Tell us about yourself</h2>
+    <p class="step-subtitle">We'll send your renovation estimate to you</p>
+    <div class="contact-form">
+      <div class="form-group">
+        <label for="userName">Full Name *</label>
+        <input type="text" id="userName" placeholder="Enter your full name" required>
+      </div>
+      <div class="form-group">
+        <label for="userEmail">Email Address *</label>
+        <input type="email" id="userEmail" placeholder="Enter your email address" required>
+      </div>
+      <div class="form-group">
+        <label for="userWhatsapp">WhatsApp Number *</label>
+        <div class="phone-input">
+          <span class="country-code">+65</span>
+          <input type="tel" id="userWhatsapp" placeholder="9XXX XXXX" required pattern="[0-9]{8}">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 6: Results -->
+  <section class="step" id="step6">
+    <h2>Your Renovation Estimate</h2>
+    <p class="step-subtitle">Here's a provisional cost breakdown for your renovation</p>
+
+    <div class="results-container">
+      <div class="result-summary">
+        <div class="result-property">
+          <span class="result-label">Property Type</span>
+          <span class="result-value" id="resultProperty">-</span>
+        </div>
+        <div class="result-styles">
+          <span class="result-label">Design Styles</span>
+          <span class="result-value" id="resultStyles">-</span>
+        </div>
+      </div>
+
+      <div class="cost-breakdown" id="costBreakdown"></div>
+
+      <div class="total-cost">
+        <div class="total-row">
+          <span>Estimated Total</span>
+          <span id="totalCost">$0</span>
+        </div>
+        <p class="estimate-note">* This is a rough provisional estimate. Final costs may vary based on site conditions, material selections, and detailed requirements.</p>
+      </div>
+
+      <div class="gift-banner">
+        <div class="gift-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c9a96e" stroke-width="2">
+            <polyline points="20 12 20 22 4 22 4 12"/>
+            <rect x="2" y="7" width="20" height="5"/>
+            <line x1="12" y1="22" x2="12" y2="7"/>
+            <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+            <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+          </svg>
+        </div>
+        <div class="gift-text">
+          <h3>Claim Your Free Gift!</h3>
+          <p>Book a consultation appointment today and receive an exclusive renovation starter pack worth <strong>$288</strong>!</p>
+        </div>
+        <button class="btn-gift" id="bookAppointment">Book Now &amp; Claim Gift</button>
+      </div>
+    </div>
+
+    <!-- Appointment Modal -->
+    <div class="modal-overlay" id="appointmentModal" style="display:none;">
+      <div class="modal-content">
+        <button class="modal-close" id="modalClose">&times;</button>
+        <h3>Book Your Free Consultation</h3>
+        <p>Choose a convenient date and time for your consultation. Claim your free renovation starter pack worth <strong>$288</strong>!</p>
+        <div class="form-group">
+          <label for="appointmentDate">Preferred Date</label>
+          <input type="date" id="appointmentDate">
+        </div>
+        <div class="form-group">
+          <label for="appointmentTime">Preferred Time</label>
+          <select id="appointmentTime">
+            <option value="">Select a time</option>
+            <option value="10:00">10:00 AM</option>
+            <option value="11:00">11:00 AM</option>
+            <option value="12:00">12:00 PM</option>
+            <option value="14:00">2:00 PM</option>
+            <option value="15:00">3:00 PM</option>
+            <option value="16:00">4:00 PM</option>
+            <option value="17:00">5:00 PM</option>
+            <option value="18:00">6:00 PM</option>
+            <option value="19:00">7:00 PM</option>
+          </select>
+        </div>
+        <button class="btn-primary btn-confirm" id="confirmAppointment">Confirm Appointment</button>
+        <div class="appointment-success" id="appointmentSuccess" style="display:none;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          <h4>Appointment Confirmed!</h4>
+          <p>We'll WhatsApp you a confirmation shortly. Your free gift will be ready at your consultation!</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Navigation Buttons -->
+  <div class="nav-buttons">
+    <button class="btn-back" id="btnBack" style="display:none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+    <button class="btn-primary" id="btnNext">
+      Next
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
+</div>
